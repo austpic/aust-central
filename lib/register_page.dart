@@ -1,4 +1,4 @@
-import 'package:aust_track/bottomnavigation_page.dart';
+import 'screens/home_page.dart'; // adjust the relative path to match where you placed it
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:aust_track/services/auth_service.dart';
@@ -58,7 +58,7 @@ class _RegisterPageState extends State<RegisterPage> {
       _showSnackBar("Account created successfully!");
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const Navigation()),
+        MaterialPageRoute(builder: (context) => const HomePage()),
       );
     } on FirebaseAuthException catch (e) {
       _showSnackBar(_authService.getErrorMessage(e.code));
