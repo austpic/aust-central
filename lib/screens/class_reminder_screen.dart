@@ -146,6 +146,14 @@ class _ClassReminderBody extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 16),
+
+                  SecondaryActionButton(
+                    label: 'Add Course',
+                    icon: Icons.add_rounded,
+                    onPressed: () => _showAddReminderDialog(context, viewModel),
+                  ),
+
                   const SizedBox(height: 24),
 
                   // Section label
@@ -170,6 +178,8 @@ class _ClassReminderBody extends StatelessWidget {
                       final reminder = viewModel.reminders[index];
                       return _ReminderCard(
                         courseName: reminder.courseName,
+                        weekday: reminder.weekday,
+                        classTime: reminder.classTime,
                         isEnabled: reminder.isEnabled,
                         minutesBefore: reminder.minutesBefore,
                         onToggle: () => viewModel.toggleReminder(index),
@@ -231,6 +241,7 @@ class _ClassReminderBody extends StatelessWidget {
                       ],
                     ),
                   ),
+                
                 PrimaryActionButton(
                   label: 'Save Settings',
                   icon: Icons.save_rounded,
@@ -243,6 +254,120 @@ class _ClassReminderBody extends StatelessWidget {
       ),
     );
   }
+  void _showAddReminderDialog(
+  BuildContext context,
+  ClassReminderViewModel viewModel,
+) {
+  final courseController = TextEditingController();
+  String selectedDay = 'Saturday';
+  TimeOfDay? selectedTime;
+
+  const days = [
+    'Saturday',
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+  ];
+
+  showDialog(
+    context: context,
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('Add Class Reminder'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: courseController,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      labelText: 'Course name',
+                      hintText: 'e.g. Data Structures',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: selectedDay,
+                    decoration: const InputDecoration(
+                      labelText: 'Class day',
+                    ),
+                    items: days
+                        .map(
+                          (day) => DropdownMenuItem(
+                            value: day,
+                            child: Text(day),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() => selectedDay = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.access_time_rounded),
+                    label: Text(
+                      selectedTime == null
+                          ? 'Select class time'
+                          : selectedTime!.format(dialogContext),
+                    ),
+                    onPressed: () async {
+                      final time = await showTimePicker(
+                        context: dialogContext,
+                        initialTime: TimeOfDay.now(),
+                      );
+
+                      if (time != null) {
+                        setDialogState(() => selectedTime = time);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final courseName = courseController.text.trim();
+
+                  if (courseName.isEmpty || selectedTime == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Course name and class time are required.'),
+                      ),
+                    );
+                    return;
+                  }
+
+                  viewModel.addReminder(
+                    courseName: courseName,
+                    weekday: selectedDay,
+                    classTime: selectedTime!.format(dialogContext),
+                  );
+
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('Add'),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
 }
 
 class _ReminderCard extends StatelessWidget {
@@ -251,13 +376,16 @@ class _ReminderCard extends StatelessWidget {
   final int minutesBefore;
   final VoidCallback onToggle;
   final ValueChanged<int?> onMinutesChanged;
-
+  final String weekday;
+  final String classTime;
   const _ReminderCard({
     required this.courseName,
     required this.isEnabled,
     required this.minutesBefore,
     required this.onToggle,
     required this.onMinutesChanged,
+    required this.weekday,
+    required this.classTime,
   });
 
   static const List<int> minuteOptions = [5, 10, 15, 30];
@@ -310,15 +438,30 @@ class _ReminderCard extends StatelessWidget {
               ),
               const SizedBox(width: 14),
               Expanded(
-                child: Text(
-                  courseName,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: isEnabled ? CgpaColors.textDark : CgpaColors.textLight,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      courseName,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: isEnabled
+                        ? CgpaColors.textDark
+                        : CgpaColors.textLight,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '$weekday • $classTime',
+                      style: const TextStyle(
+                      fontSize: 12,
+                      color: CgpaColors.textMedium,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Switch.adaptive(
