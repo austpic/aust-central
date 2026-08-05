@@ -12,7 +12,7 @@ import 'notice_board_screen.dart';
 import 'cgpa_calculator_screen.dart';
 import 'lab_report_screen.dart';
 import 'blood_bank_screen.dart';
-import 'book_exchange_screen.dart';
+import 'book_exchange/book_exchange_screen.dart';
 import 'lost_found_screen.dart';
 import 'profile_screen.dart';
 
