@@ -53,6 +53,20 @@ class ClassReminderViewModel extends ChangeNotifier {
   _isSaved = false;
   notifyListeners();
 }
+
+  void addAssessmentReminder(
+  int courseIndex, {
+  required AssessmentType type,
+  required DateTime dateTime,
+}) {
+  _reminders[courseIndex].assessments.add(
+    AssessmentReminder(type: type, dateTime: dateTime),
+  );
+
+  _isSaved = false;
+  notifyListeners();
+}
+
   void saveSettings() {
     _isSaved = true;
     notifyListeners();

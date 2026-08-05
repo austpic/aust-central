@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../constants/app_colors.dart';
 import '../viewmodels/class_reminder_viewmodel.dart';
 import '../widgets/cgpa_widgets.dart';
-
+import '../models/class_reminder_model.dart';
 class ClassReminderScreen extends StatelessWidget {
   const ClassReminderScreen({super.key});
 
@@ -177,13 +177,15 @@ class _ClassReminderBody extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final reminder = viewModel.reminders[index];
                       return _ReminderCard(
-                        courseName: reminder.courseName,
-                        weekday: reminder.weekday,
-                        classTime: reminder.classTime,
-                        isEnabled: reminder.isEnabled,
-                        minutesBefore: reminder.minutesBefore,
-                        onToggle: () => viewModel.toggleReminder(index),
-                        onMinutesChanged: (val) {
+                          courseName: reminder.courseName,
+                          weekday: reminder.weekday,
+                          classTime: reminder.classTime,
+                          isEnabled: reminder.isEnabled,
+                          minutesBefore: reminder.minutesBefore,
+                          assessments: reminder.assessments,
+                          onCardTap: () => _showAssessmentDialog(context, viewModel, index),
+                          onToggle: () => viewModel.toggleReminder(index),
+                          onMinutesChanged: (val) {
                           if (val != null) {
                             viewModel.updateMinutesBefore(index, val);
                           }
@@ -257,7 +259,9 @@ class _ClassReminderBody extends StatelessWidget {
   void _showAddReminderDialog(
   BuildContext context,
   ClassReminderViewModel viewModel,
-) {
+)
+ 
+{
   final courseController = TextEditingController();
   String selectedDay = 'Saturday';
   TimeOfDay? selectedTime;
@@ -368,6 +372,127 @@ class _ClassReminderBody extends StatelessWidget {
     },
   );
 }
+void _showAssessmentDialog(
+  BuildContext context,
+  ClassReminderViewModel viewModel,
+  int courseIndex,
+) {
+  AssessmentType selectedType = AssessmentType.quiz;
+  DateTime? selectedDate;
+  TimeOfDay? selectedTime;
+
+  showDialog(
+    context: context,
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('Add Exam Reminder'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<AssessmentType>(
+                  value: selectedType,
+                  decoration: const InputDecoration(
+                    labelText: 'Assessment type',
+                  ),
+                  items: AssessmentType.values
+                      .map(
+                        (type) => DropdownMenuItem(
+                          value: type,
+                          child: Text(type.label),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setDialogState(() => selectedType = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.calendar_month_rounded),
+                  label: Text(
+                    selectedDate == null
+                        ? 'Select date'
+                        : '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}',
+                  ),
+                  onPressed: () async {
+                    final date = await showDatePicker(
+                      context: dialogContext,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime(DateTime.now().year + 5),
+                      initialDate: DateTime.now(),
+                    );
+
+                    if (date != null) {
+                      setDialogState(() => selectedDate = date);
+                    }
+                  },
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.access_time_rounded),
+                  label: Text(
+                    selectedTime == null
+                        ? 'Select reminder time'
+                        : selectedTime!.format(dialogContext),
+                  ),
+                  onPressed: () async {
+                    final time = await showTimePicker(
+                      context: dialogContext,
+                      initialTime: TimeOfDay.now(),
+                    );
+
+                    if (time != null) {
+                      setDialogState(() => selectedTime = time);
+                    }
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  if (selectedDate == null || selectedTime == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Date and reminder time are required.'),
+                      ),
+                    );
+                    return;
+                  }
+
+                  final dateTime = DateTime(
+                    selectedDate!.year,
+                    selectedDate!.month,
+                    selectedDate!.day,
+                    selectedTime!.hour,
+                    selectedTime!.minute,
+                  );
+
+                  viewModel.addAssessmentReminder(
+                    courseIndex,
+                    type: selectedType,
+                    dateTime: dateTime,
+                  );
+
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+} 
 }
 
 class _ReminderCard extends StatelessWidget {
@@ -378,6 +503,8 @@ class _ReminderCard extends StatelessWidget {
   final ValueChanged<int?> onMinutesChanged;
   final String weekday;
   final String classTime;
+  final List<AssessmentReminder> assessments;
+  final VoidCallback onCardTap;
   const _ReminderCard({
     required this.courseName,
     required this.isEnabled,
@@ -386,13 +513,20 @@ class _ReminderCard extends StatelessWidget {
     required this.onMinutesChanged,
     required this.weekday,
     required this.classTime,
+    required this.assessments,
+    required this.onCardTap,
   });
 
   static const List<int> minuteOptions = [5, 10, 15, 30];
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onCardTap,
+      child: AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
       margin: const EdgeInsets.only(bottom: 12),
@@ -543,8 +677,40 @@ class _ReminderCard extends StatelessWidget {
               ),
             ),
           ],
+          if (assessments.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 4),
+            ...assessments.map(
+              (assessment) => Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.event_available_rounded,
+                      size: 17,
+                      color: CgpaColors.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${assessment.type.label}: '
+                      '${assessment.dateTime.day}/${assessment.dateTime.month}/${assessment.dateTime.year}'
+                      ' • ${TimeOfDay.fromDateTime(assessment.dateTime).format(context)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: CgpaColors.textMedium,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
+    ),
+    ),
     );
   }
 }
