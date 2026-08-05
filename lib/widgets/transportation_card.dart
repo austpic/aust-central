@@ -61,7 +61,7 @@ class TransportationCard extends StatelessWidget {
                 children: [
                   SizedBox(
                     width: double.infinity,
-                    child: Text('Transportation',
+                    child: Text('Transport',
                         textAlign: TextAlign.center,
                         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textDark)),
                   ),
