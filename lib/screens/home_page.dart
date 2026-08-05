@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/app_colors.dart';
 import '../widgets/custom_cards.dart';
 import '../widgets/transportation_card.dart';
+import '../services/auth_service.dart';
 
 import 'notifications_screen.dart';
 import 'todo_list_screen.dart';
@@ -25,6 +26,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final ScrollController _scrollController = ScrollController();
+  final AuthService _authService = AuthService();
   double _scrollOffset = 0;
 
   @override
@@ -61,6 +63,25 @@ class _HomePageState extends State<HomePage> {
     return '$weekday, $hour12:$minute $period';
   }
 
+  /// Pulls the signed-in user's last name from Firebase Auth's
+  /// `displayName` (set during registration in AuthService.register,
+  /// e.g. "Farhana Rahman"). Falls back gracefully if it's missing —
+  /// e.g. accounts created before displayName was set, or Google/other
+  /// sign-in methods that didn't populate it.
+  String get _userLastName {
+    final displayName = _authService.currentUser?.displayName;
+    if (displayName == null || displayName.trim().isEmpty) {
+      // Fall back to the part of the email before '@', if available.
+      final email = _authService.currentUser?.email;
+      if (email != null && email.contains('@')) {
+        return email.split('@').first;
+      }
+      return 'User';
+    }
+    final parts = displayName.trim().split(RegExp(r'\s+'));
+    return parts.length > 1 ? parts.last : parts.first;
+  }
+
   Widget _iconSwatch(IconData icon) {
     return Container(
       width: 40,
@@ -72,8 +93,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    const userName = 'Farhana';
-
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       body: SafeArea(
@@ -95,7 +114,7 @@ class _HomePageState extends State<HomePage> {
                             style: const TextStyle(
                                 fontSize: 14, color: AppColors.subtitleGrey, fontWeight: FontWeight.w600, height: 1.0)),
                         const SizedBox(height: 4),
-                        Text('${_greeting()}, $userName',
+                        Text('${_greeting()}, $_userLastName',
                             style: const TextStyle(
                                 fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textDark, height: 1.1)),
                       ],
@@ -220,7 +239,7 @@ class _HomePageState extends State<HomePage> {
                       );
                     },
                   ),
-          const SizedBox(height: 14),
+                  const SizedBox(height: 14),
                 ],
               ),
               const SizedBox(height: 20),
@@ -230,59 +249,59 @@ class _HomePageState extends State<HomePage> {
                 label: 'Community',
                 children: [
                   IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: DashboardIconCard(
-                              title: 'Blood\nBank',
-                              chipText: '2 requests nearby',
-                              leadingIcon: _iconSwatch(Icons.bloodtype),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const BloodBankScreen(),
-                                  ),
-                                );
-                              },
-                            ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: DashboardIconCard(
+                            title: 'Blood\nBank',
+                            chipText: '2 requests nearby',
+                            leadingIcon: _iconSwatch(Icons.bloodtype),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const BloodBankScreen(),
+                                ),
+                              );
+                            },
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: DashboardIconCard(
-                              title: 'Book\nExchange',
-                              chipText: '14 listings',
-                              leadingIcon: _iconSwatch(Icons.menu_book),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const BookExchangeScreen(),
-                                  ),
-                                );
-                              },
-                            ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DashboardIconCard(
+                            title: 'Book\nExchange',
+                            chipText: '14 listings',
+                            leadingIcon: _iconSwatch(Icons.menu_book),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const BookExchangeScreen(),
+                                ),
+                              );
+                            },
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
+                  ),
 
-                    const SizedBox(height: 14),
+                  const SizedBox(height: 14),
 
-                    DashboardRowCard(
-                      title: 'Lost & Found',
-                      trailingText: '5 items',
-                      leadingWidget: _iconSwatch(Icons.inventory_2),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LostFoundScreen(),
-                          ),
-                        );
-                      },
-                    ),
+                  DashboardRowCard(
+                    title: 'Lost & Found',
+                    trailingText: '5 items',
+                    leadingWidget: _iconSwatch(Icons.inventory_2),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LostFoundScreen(),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ],
