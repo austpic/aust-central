@@ -106,7 +106,7 @@ class _HomePageState extends State<HomePage> {
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const NotificationsScreen()));
                     },
                     child: Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.only(left: 12, right: 12, bottom: 12), // no top padding
                       child: SvgPicture.asset(
                         'assets/icons/notification.svg',
                         width: 50,

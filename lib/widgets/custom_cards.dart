@@ -160,15 +160,27 @@ class DashboardRowCard extends StatelessWidget {
               Expanded(
                 child: Text(title,
                     style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textDark
+                    )
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                padding: const EdgeInsets.symmetric(vertical:9, horizontal: 10),
                 decoration:
-                BoxDecoration(color: AppColors.mintChip, borderRadius: BorderRadius.circular(14)),
+                BoxDecoration(
+                    color: AppColors.mintChip,
+                    borderRadius: BorderRadius.circular(18)),
                 child: Text(trailingText,
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                    style: const
+                    TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textDark
+                    )
+                ),
               ),
             ],
           ),

@@ -10,7 +10,7 @@ class TransportationScreen extends StatelessWidget {
       backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
         backgroundColor: AppColors.scaffoldBackground,
-        title: const Text('Transportation'),
+        title: const Text('Transport'),
       ),
       body: const Center(
         child: Text('This is the real Transportation page!'),
