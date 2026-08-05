@@ -10,8 +10,6 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
-  qr_flutter: ^4.1.0
-  mobile_scanner: ^5.0.0
   google_nav_bar: ^5.0.7
   google_fonts: ^8.0.2
   firebase_core: ^4.13.0

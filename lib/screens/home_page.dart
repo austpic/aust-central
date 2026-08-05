@@ -14,7 +14,7 @@ import 'lab_report_screen.dart';
 import 'blood_bank_screen.dart';
 import 'book_exchange_screen.dart';
 import 'lost_found_screen.dart';
-import 'scan_qr_code_screen.dart';
+import 'profile_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -207,6 +207,20 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SizedBox(height: 14),
+                  DashboardRowCard(
+                    title: 'User Profile',
+                    trailingText: 'View details',
+                    leadingWidget: _iconSwatch(Icons.person_outline),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ProfileScreen(),
+                        ),
+                      );
+                    },
+                  ),
+          const SizedBox(height: 14),
                 ],
               ),
               const SizedBox(height: 20),
@@ -216,62 +230,59 @@ class _HomePageState extends State<HomePage> {
                 label: 'Community',
                 children: [
                   IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: DashboardIconCard(
-                            title: 'Blood\nBank',
-                            chipText: '2 requests nearby',
-                            leadingIcon: _iconSwatch(Icons.bloodtype),
-                            onTap: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => const BloodBankScreen()));
-                            },
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: DashboardIconCard(
+                              title: 'Blood\nBank',
+                              chipText: '2 requests nearby',
+                              leadingIcon: _iconSwatch(Icons.bloodtype),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const BloodBankScreen(),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: DashboardIconCard(
-                            title: 'Book\nExchange',
-                            chipText: '14 listings',
-                            leadingIcon: _iconSwatch(Icons.menu_book),
-                            onTap: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => const BookExchangeScreen()));
-                            },
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DashboardIconCard(
+                              title: 'Book\nExchange',
+                              chipText: '14 listings',
+                              leadingIcon: _iconSwatch(Icons.menu_book),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const BookExchangeScreen(),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: DashboardIconCard(
-                            title: 'Lost &\nFound',
-                            chipText: '5 items',
-                            leadingIcon: _iconSwatch(Icons.inventory_2),
-                            onTap: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => const LostFoundScreen()));
-                            },
+
+                    const SizedBox(height: 14),
+
+                    DashboardRowCard(
+                      title: 'Lost & Found',
+                      trailingText: '5 items',
+                      leadingWidget: _iconSwatch(Icons.inventory_2),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LostFoundScreen(),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: DashboardIconCard(
-                            title: 'QR\nScanner',
-                            chipText: 'Scan',
-                            leadingIcon: _iconSwatch(Icons.qr_code_scanner),
-                            onTap: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => const ScanQrCodeScreen()));
-                            },
-                          ),
-                        ),
-                      ],
+                        );
+                      },
                     ),
-                  ),
                 ],
               ),
             ],
