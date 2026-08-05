@@ -7,13 +7,14 @@ import '../widgets/transportation_card.dart';
 import 'notifications_screen.dart';
 import 'todo_list_screen.dart';
 import 'class_reminder_screen.dart';
-import 'transportation_screen.dart';
+import 'bus_page.dart';
 import 'notice_board_screen.dart';
 import 'cgpa_calculator_screen.dart';
 import 'lab_report_screen.dart';
-import 'profile_screen.dart';
 import 'blood_bank_screen.dart';
 import 'book_exchange_screen.dart';
+import 'lost_found_screen.dart';
+import 'scan_qr_code_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -129,6 +130,7 @@ class _HomePageState extends State<HomePage> {
                           Expanded(
                             child: DashboardCenteredCard(
                               title: 'To-do List',
+                              // TODO: '3 due today' is fabricated — page is a static mock, no data model.
                               chipText: '3 due today',
                               onTap: () {
                                 Navigator.push(context, MaterialPageRoute(builder: (context) => const TodoListScreen()));
@@ -153,7 +155,7 @@ class _HomePageState extends State<HomePage> {
                       child: TransportationCard(
                         scrollOffset: _scrollOffset,
                         onTap: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => const TransportationScreen()));
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const BusPage()));
                         },
                       ),
                     ),
@@ -205,27 +207,6 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  DashboardRowCard(
-                    title: 'User Profile',
-                    trailingText: 'Click here for details',
-                    leadingWidget: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.mintChip,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.all(8),
-                      child: SvgPicture.asset(
-                        'assets/icons/profile_icon.svg',
-                        width: 35,
-                        height: 35,
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen()));
-                    },
-                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -256,6 +237,35 @@ class _HomePageState extends State<HomePage> {
                             leadingIcon: _iconSwatch(Icons.menu_book),
                             onTap: () {
                               Navigator.push(context, MaterialPageRoute(builder: (context) => const BookExchangeScreen()));
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: DashboardIconCard(
+                            title: 'Lost &\nFound',
+                            chipText: '5 items',
+                            leadingIcon: _iconSwatch(Icons.inventory_2),
+                            onTap: () {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const LostFoundScreen()));
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DashboardIconCard(
+                            title: 'QR\nScanner',
+                            chipText: 'Scan',
+                            leadingIcon: _iconSwatch(Icons.qr_code_scanner),
+                            onTap: () {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const ScanQrCodeScreen()));
                             },
                           ),
                         ),
