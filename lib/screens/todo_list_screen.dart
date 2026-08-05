@@ -5,15 +5,15 @@ import 'package:flutter/material.dart';
 // THEME COLORS (Derived from Lab Report Screen)
 // ---------------------------------------------------------------------------
 class _LabReportThemeColors {
-  static const Color scaffoldBackground = Color(0xFFF4F7F6);
+  static const Color scaffoldBackground = Color(0xFFFFFFFF);
   static const Color primary = Color(0xFF407362);
   static const Color textDark = Color(0xFF2C3E35);
   static const Color secondary = Color(0xFFBEEDDC);
   static const Color gradientLight = Color(0xFF8CD4B8);
   static const Color white = Color(0xFFFFFFFF);
-  static const Color subtitleGrey = Color(0xFF616161); // Colors.grey.shade700 equivalent
-  static const Color success = Color(0xFF2F8F6A); // Retained for state consistency
-  static const Color danger = Color(0xFFB5392B); // Retained for state consistency
+  static const Color subtitleGrey = Color(0xFF616161);
+  static const Color success = Color(0xFF2F8F6A);
+  static const Color danger = Color(0xFFB5392B);
 }
 
 // ---------------------------------------------------------------------------
@@ -193,41 +193,31 @@ class _TodoListScreenState extends State<TodoListScreen> {
     final progress = total == 0 ? 0.0 : _completedCount / total;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [_LabReportThemeColors.scaffoldBackground, _LabReportThemeColors.gradientLight],
-            stops: [0.0, 0.7],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(total, progress),
-              _buildFilterChips(),
-              Expanded(
-                child: _visibleTasks.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                  itemCount: _visibleTasks.length,
-                  itemBuilder: (context, index) {
-                    final task = _visibleTasks[index];
-                    return _TaskTile(
-                      key: ValueKey(task.id),
-                      task: task,
-                      onToggle: () => _toggleDone(task.id),
-                      onDelete: () => _deleteTask(task.id),
-                      onTap: () => _openTaskForm(existing: task),
-                    );
-                  },
-                ),
+      backgroundColor: _LabReportThemeColors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(total, progress),
+            _buildFilterChips(),
+            Expanded(
+              child: _visibleTasks.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                itemCount: _visibleTasks.length,
+                itemBuilder: (context, index) {
+                  final task = _visibleTasks[index];
+                  return _TaskTile(
+                    key: ValueKey(task.id),
+                    task: task,
+                    onToggle: () => _toggleDone(task.id),
+                    onDelete: () => _deleteTask(task.id),
+                    onTap: () => _openTaskForm(existing: task),
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -242,26 +232,26 @@ class _TodoListScreenState extends State<TodoListScreen> {
   Widget _buildHeader(int total, double progress) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 16, 12, 20),
-      decoration: const BoxDecoration(
-        color: _LabReportThemeColors.primary, // Changed to a solid mild green
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(28),
-          bottomRight: Radius.circular(28),
-        ),
-      ),
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
+      color: _LabReportThemeColors.primary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'To-Do List',
-                style: TextStyle(
-                  color: _LabReportThemeColors.white,
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.arrow_back, color: _LabReportThemeColors.white),
+                tooltip: 'Back to Home',
+              ),
+              const Expanded(
+                child: Text(
+                  'To-Do List',
+                  style: TextStyle(
+                    color: _LabReportThemeColors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               IconButton(
@@ -272,20 +262,26 @@ class _TodoListScreenState extends State<TodoListScreen> {
             ],
           ),
           const SizedBox(height: 4),
-          Text(
-            total == 0
-                ? 'Nothing on your plate yet'
-                : '$_completedCount of $total completed',
-            style: TextStyle(color: _LabReportThemeColors.white.withValues(alpha: 0.9), fontSize: 14),
+          Padding(
+            padding: const EdgeInsets.only(left: 8.0),
+            child: Text(
+              total == 0
+                  ? 'Nothing on your plate yet'
+                  : '$_completedCount of $total completed',
+              style: TextStyle(color: _LabReportThemeColors.white.withValues(alpha: 0.9), fontSize: 14),
+            ),
           ),
           const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 10,
-              backgroundColor: _LabReportThemeColors.white.withValues(alpha: 0.3),
-              valueColor: const AlwaysStoppedAnimation<Color>(_LabReportThemeColors.secondary),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 10,
+                backgroundColor: _LabReportThemeColors.white.withValues(alpha: 0.3),
+                valueColor: const AlwaysStoppedAnimation<Color>(_LabReportThemeColors.secondary),
+              ),
             ),
           ),
         ],
@@ -672,7 +668,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
         decoration: const BoxDecoration(
-          color: _LabReportThemeColors.scaffoldBackground,
+          color: Color(0xFFEBEBEB), // Bottom sheet background updated to 0xFFEBEBEB
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(28),
             topRight: Radius.circular(28),
@@ -689,7 +685,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
                   width: 40,
                   height: 5,
                   decoration: BoxDecoration(
-                    color: _LabReportThemeColors.primary.withValues(alpha: 0.5),
+                    color: _LabReportThemeColors.subtitleGrey.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
@@ -700,7 +696,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: _LabReportThemeColors.textDark,
+                  color: _LabReportThemeColors.textDark, // Adjusted text color for contrast
                 ),
               ),
               const SizedBox(height: 16),
@@ -713,9 +709,13 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
                   errorText: _errorText,
                   filled: true,
                   fillColor: _LabReportThemeColors.white,
-                  border: OutlineInputBorder(
+                  enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
+                    borderSide: const BorderSide(color: Color(0xFF6B8578), width: 1.5), // Card outline set to 0xFF6B8578
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFF6B8578), width: 2.0), // Focused outline set to 0xFF6B8578
                   ),
                 ),
                 onChanged: (_) {
@@ -731,9 +731,13 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
                   hintText: 'Add a note (optional)',
                   filled: true,
                   fillColor: _LabReportThemeColors.white,
-                  border: OutlineInputBorder(
+                  enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
+                    borderSide: const BorderSide(color: Color(0xFF6B8578), width: 1.5), // Card outline set to 0xFF6B8578
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFF6B8578), width: 2.0), // Focused outline set to 0xFF6B8578
                   ),
                 ),
               ),
@@ -760,6 +764,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
                   decoration: BoxDecoration(
                     color: _LabReportThemeColors.white,
                     borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFF6B8578), width: 1.5), // Card outline set to 0xFF6B8578
                   ),
                   child: Row(
                     children: [
@@ -829,7 +834,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
         decoration: BoxDecoration(
           color: selected ? _LabReportThemeColors.primary : _LabReportThemeColors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: _LabReportThemeColors.primary.withValues(alpha: 0.4)),
+          border: Border.all(color: const Color(0xFF6B8578), width: 1.5), // Category button outline set to 0xFF6B8578
         ),
         alignment: Alignment.center,
         child: Text(
