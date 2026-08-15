@@ -1,0 +1,551 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens ported from campus_app_redesign_v7.html (the v7 visual bar)
+ * and layered over the Flutter-derived tokens they map to. Legacy token names
+ * are preserved so every view/component compiles unchanged while the values
+ * now follow the reference palette:
+ *   ink/ice  #16241D   mint #6EF2A5   mint-deep #2BC97A   mint-ink #0D7A3D
+ *   gold #F2C25B        gold-ink #B45309   sky #57C7EC    sky-ink #0369A1
+ *   violet #B98BF2      violet-ink #7C3AED  coral #FF6E56  coral-ink #C1442D
+ */
+@theme {
+  /* ---- Three-font stack (reference) ---- */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* ---- Reference palette (v7) ---- */
+  --color-mint: #6ef2a5;
+  --color-mint-deep: #2bc97a;
+  --color-mint-ink: #0d7a3d;
+  --color-gold: #f2c25b;
+  --color-gold-ink: #b45309;
+  --color-sky: #57c7ec;
+  --color-sky-ink: #0369a1;
+  --color-violet: #b98bf2;
+  --color-violet-ink: #7c3aed;
+  --color-coral: #ff6e56;
+  --color-coral-ink: #c1442d;
+  --color-ice: #16241d;
+  --color-dim: rgba(22, 36, 29, 0.62);
+  --color-dim2: rgba(22, 36, 29, 0.4);
+
+  /* ---- AppColors (lib/theme/app_colors.dart) remapped to reference ---- */
+  --color-scaffold: #eef4f0;
+  --color-darkgreen: #16241d;
+  --color-textdark: #16241d;
+  --color-mintchip: #6ef2a5;
+  --color-mintsection: #c9e1d5;
+  --color-white: #ffffff;
+  --color-subtlegrey: rgba(22, 36, 29, 0.62);
+  --color-success: #0d7a3d;
+  --color-warning: #b45309;
+  --color-danger: #c1442d;
+  --color-bloodsoft: #e9a8a8;
+
+  /* ---- CgpaColors (lib/constants/app_colors.dart) remapped ---- */
+  --color-primary: #0d7a3d;
+  --color-secondary: #2bc97a;
+  --color-lightaccent: #6ef2a5;
+  --color-cgpabackground: #eef4f0;
+  --color-border: #b5b5b5;
+  --color-cgpadark: #16241d;
+  --color-cgpamedium: rgba(22, 36, 29, 0.4);
+  --color-cgpalight: rgba(22, 36, 29, 0.62);
+  --color-cgpasuccess: #0d7a3d;
+  --color-cgpawarning: #b45309;
+  --color-cgpaerror: #d64545;
+
+  /* ---- Notice / Dashboard gradient (custom_cards.dart) ---- */
+  --color-noticestart: #2bc97a;
+  --color-noticeend: #0d7a3d;
+
+  /* ---- Lab Report + To-do local palette remapped ---- */
+  --color-labprimary: #0d7a3d;
+  --color-labsecondary: #6ef2a5;
+  --color-labgradlight: #8cd4b8;
+  --color-labtext: #16241d;
+  --color-labbackground: #eef4f0;
+  --color-labgrey: rgba(22, 36, 29, 0.62);
+
+  /* ---- Misc neutrals (green-tinted dims like the reference) ---- */
+  --color-ink: #16241d;
+  --color-black54: rgba(22, 36, 29, 0.54);
+  --color-black38: rgba(22, 36, 29, 0.38);
+  --color-amberwash: #fce7cf;
+  --color-redwash: #f6d6d2;
+  --color-chipborder: #f1f1f1;
+  --color-sheetgrey: #ebebeb;
+
+  /* ---- Glass system (exact reference recipe) ---- */
+  --color-glass-border: rgba(16, 36, 26, 0.09);
+  --color-glass-highlight: rgba(255, 255, 255, 0.16);
+  --color-glass-rim: rgba(16, 36, 26, 0.09);
+
+  --shadow-glass-tight: 0 10px 28px rgba(22, 55, 40, 0.07);
+  --shadow-glass-ambient: 0 10px 28px rgba(22, 55, 40, 0.07);
+  --shadow-glass: 0 10px 28px rgba(22, 55, 40, 0.07);
+  --shadow-glass-lg: 0 10px 28px rgba(22, 55, 40, 0.07), 0 24px 56px -24px rgba(22, 55, 40, 0.22);
+
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* ------------------------------------------------------------------ */
+/* Base: soft radial wash (mint glow top-left, sky glow bottom-right). */
+/* ------------------------------------------------------------------ */
+html {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  position: relative;
+  min-height: 100svh;
+  background-color: #eef4f0;
+  color: var(--color-textdark);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Fixed radial wash — glass surfaces sit on top and blur it. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(46, 201, 122, 0.16) 0%, transparent 45%),
+    radial-gradient(circle at 90% 100%, rgba(87, 199, 236, 0.14) 0%, transparent 45%);
+}
+
+#root {
+  min-height: 100svh;
+}
+
+/* Headings default to the display face; body text stays Inter. */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
+
+/* ------------------------------------------------------------------ */
+/* Glass surface recipes (exact reference values; opaque fallback).    */
+/* ------------------------------------------------------------------ */
+@layer components {
+  /* Surface glass — cards, panels, nav, form rows.                    */
+  .glass {
+    background-color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(16, 36, 26, 0.09);
+    border-radius: 20px;
+    box-shadow: 0 10px 28px rgba(22, 55, 40, 0.07);
+  }
+
+  /* Stronger surface — modals, elevated panels.                       */
+  .glass-strong {
+    background-color: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(16, 36, 26, 0.09);
+    border-radius: 24px;
+    box-shadow: 0 10px 28px rgba(22, 55, 40, 0.07), 0 24px 56px -24px rgba(22, 55, 40, 0.22);
+  }
+
+  /* Tinted glass swatch — icon wells, chips (mint default, v7 .hubicon/.fnum). */
+  .glass-tint {
+    background-color: rgba(110, 242, 165, 0.12);
+    border: 1px solid rgba(16, 36, 26, 0.09);
+  }
+
+  /* Accent glass — brand gradient (mint-deep → mint-ink), white text. */
+  .glass-accent {
+    position: relative;
+    background: linear-gradient(150deg, #2bc97a 0%, #0d7a3d 100%);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 10px 26px -10px rgba(13, 122, 61, 0.45);
+  }
+
+  /* Specular sheen — one soft light sweep for hero cards.            */
+  .glass-sheen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background:
+      radial-gradient(140% 70% at 18% 0%, rgba(255, 255, 255, 0.26), transparent 52%),
+      linear-gradient(115deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 28%, transparent 46%);
+    mix-blend-mode: screen;
+  }
+
+  /* Eyebrow / section label — mono, letter-spaced, uppercase (v7).    */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-mint-ink);
+  }
+
+  /* Eyebrow with the reference's leading rule line.                  */
+  .eyebrow-rule {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-mint-ink);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .eyebrow-rule::before {
+    content: "";
+    width: 22px;
+    height: 1px;
+    background: var(--color-mint);
+    flex: 0 0 auto;
+  }
+
+  /* Mono metadata label (timestamps, captions, status).              */
+  .mono {
+    font-family: var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Gradient-clip headline — darkest → brand green (v7 .intro h1).    */
+  .text-gradient {
+    background: linear-gradient(100deg, #16241d 15%, #0d7a3d 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Tinted category/status badges (v7 .tag — 16% tint of the ink).    */
+  .tag-mint {
+    background-color: rgba(110, 242, 165, 0.16);
+    color: #0d7a3d;
+  }
+  .tag-gold {
+    background-color: rgba(242, 194, 91, 0.16);
+    color: #b45309;
+  }
+  .tag-sky {
+    background-color: rgba(87, 199, 236, 0.16);
+    color: #0369a1;
+  }
+  .tag-violet {
+    background-color: rgba(185, 139, 242, 0.18);
+    color: #7c3aed;
+  }
+  .tag-coral {
+    background-color: rgba(255, 110, 86, 0.16);
+    color: #c1442d;
+    box-shadow: 0 0 10px rgba(255, 110, 86, 0.25);
+  }
+
+  /* Pulsing live dot (v7 .livedot) — marks active/urgent states.     */
+  .live-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-mint);
+    box-shadow: 0 0 8px 2px rgba(110, 242, 165, 0.7);
+    animation: pulse-glow 1.6s ease-in-out infinite;
+  }
+
+  /* Pill chip surface — neutral glass pill (v7 nav/tag pills).        */
+  .glass-pill {
+    background-color: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(16, 36, 26, 0.09);
+    border-radius: 20px;
+  }
+
+  /* Active pill — mint tint + soft glow (v7 navitem.active).          */
+  .glass-pill-active {
+    background-color: rgba(110, 242, 165, 0.18);
+    border: 1px solid rgba(13, 122, 61, 0.28);
+    border-radius: 20px;
+    color: #0d7a3d;
+    box-shadow: 0 0 14px rgba(110, 242, 165, 0.25);
+  }
+
+  /* Glass input well (v7 .fieldgrp input surface).                   */
+  .glass-input {
+    background-color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(16, 36, 26, 0.09);
+    border-radius: 14px;
+    box-shadow: inset 0 1px 2px rgba(16, 36, 26, 0.04);
+  }
+  .glass-input:focus-within {
+    border-color: rgba(13, 122, 61, 0.5);
+    box-shadow:
+      inset 0 1px 2px rgba(16, 36, 26, 0.04),
+      0 0 0 4px rgba(110, 242, 165, 0.15);
+  }
+
+  /* Numbered form-row index badge (v7 .fnum).                        */
+  .fnum {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: #0d7a3d;
+    background: rgba(110, 242, 165, 0.12);
+    border-radius: 8px;
+  }
+
+  /* Floating action button — mint gradient, dark glyph (v7 .fab).    */
+  .fab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(150deg, #6ef2a5, #2bc97a);
+    border-radius: 16px;
+    color: #0a1713;
+    box-shadow: 0 10px 24px rgba(110, 242, 165, 0.35);
+    transition: transform 0.18s ease-out, box-shadow 0.18s ease-out;
+  }
+  .fab:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(110, 242, 165, 0.45);
+  }
+}
+
+/* Ambient drifting blobs (v7 .blob) + grain overlay. Rendered as a
+   fixed layer by <AmbientBackground /> and by auth screens.          */
+.ambient-layer {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.ambient-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(50px);
+  pointer-events: none;
+}
+.ambient-blob.b1 {
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, #2bc97a, transparent 70%);
+  opacity: 0.2;
+  top: -60px;
+  left: -50px;
+  animation: blob-drift1 9s ease-in-out infinite;
+}
+.ambient-blob.b2 {
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle, #f2c25b, transparent 70%);
+  opacity: 0.15;
+  bottom: 80px;
+  right: -40px;
+  animation: blob-drift2 11s ease-in-out infinite;
+}
+.ambient-blob.b3 {
+  width: 170px;
+  height: 170px;
+  background: radial-gradient(circle, #57c7ec, transparent 70%);
+  opacity: 0.15;
+  top: 220px;
+  right: -60px;
+  animation: blob-drift2 13s ease-in-out infinite;
+}
+.ambient-blob.b4 {
+  width: 160px;
+  height: 160px;
+  background: radial-gradient(circle, #b98bf2, transparent 70%);
+  opacity: 0.14;
+  bottom: -40px;
+  left: -40px;
+  animation: blob-drift1 10s ease-in-out infinite;
+}
+@keyframes blob-drift1 {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(24px, 30px);
+  }
+}
+@keyframes blob-drift2 {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-20px, -24px);
+  }
+}
+
+/* Grain overlay — fractal noise at ~3.5% over the whole screen.       */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  opacity: 0.035;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Enable backdrop blur only where the browser supports it — on
+   unsupported / low-power devices the opaque fallbacks above apply.  */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background-color: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .glass-strong {
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(30px) saturate(160%);
+    -webkit-backdrop-filter: blur(30px) saturate(160%);
+  }
+
+  .glass-tint {
+    background-color: rgba(110, 242, 165, 0.12);
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+  }
+
+  .glass-input {
+    background-color: rgba(255, 255, 255, 0.62);
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+  }
+
+  .glass-pill {
+    background-color: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+  }
+
+  .glass-pill-active {
+    background-color: rgba(110, 242, 165, 0.18);
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Micro-interaction & motion tokens.                                  */
+/* ------------------------------------------------------------------ */
+button,
+a,
+[role="button"] {
+  transition:
+    transform 0.18s ease-out,
+    box-shadow 0.18s ease-out,
+    background-color 0.18s ease-out,
+    border-color 0.18s ease-out,
+    color 0.18s ease-out,
+    opacity 0.18s ease-out,
+    filter 0.18s ease-out;
+}
+
+/* Glass-appropriate focus ring (soft mint glow).                     */
+:where(button, a, input, select, textarea, [role="switch"], [role="button"]):focus-visible {
+  outline: 2px solid rgba(13, 122, 61, 0.6);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(110, 242, 165, 0.18);
+}
+
+/* Dialog / toast entrance — fade + blur-in to sell the material.     */
+@keyframes glass-pop {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+.glass-pop {
+  animation: glass-pop 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.toast-in {
+  animation: toast-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Soft page fade for routed views.                                   */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.page-in {
+  animation: page-in 0.3s ease-out;
+}
+
+/* Pulsing glow for live dots (v7 pulseGlow).                         */
+@keyframes pulse-glow {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Ring progress animation.                                           */
+@keyframes ring-fill {
+  from {
+    stroke-dashoffset: var(--ring-circ);
+  }
+  to {
+    stroke-dashoffset: var(--ring-target);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
