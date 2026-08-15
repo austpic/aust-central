@@ -1,5 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
+      Required for every API call. This was previously declared ONLY in the
+      debug and profile manifests, so a release APK installed without network
+      access and every request failed silently.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Camera Permissions & Hardware Feature Declarations -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
@@ -14,9 +21,10 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
 
     <application
-        android:label="aust_track"
+        android:label="AUST Central"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:networkSecurityConfig="@xml/network_security_config">
 
         <activity
             android:name=".MainActivity"

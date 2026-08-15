@@ -1,0 +1,50 @@
+name: aust-central
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aust
+      POSTGRES_PASSWORD: aust_dev_password
+      POSTGRES_DB: aust_central
+    ports:
+      # Bound to loopback only: without the 127.0.0.1 prefix Docker publishes
+      # on 0.0.0.0 and punches through the host firewall, exposing the dev
+      # database to the local network.
+      #
+      # Host port is 5434, not 5432, to stay clear of any PostgreSQL already
+      # installed on the machine. Binding 5432 would either fail to start or —
+      # worse — silently point the app at the developer's existing database.
+      - '127.0.0.1:5434:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U aust -d aust_central']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Separate throwaway database for integration tests, so a test run never
+  # truncates the data you were developing against.
+  postgres-test:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aust
+      POSTGRES_PASSWORD: aust_test_password
+      POSTGRES_DB: aust_central_test
+    ports:
+      - '127.0.0.1:5433:5432'
+    tmpfs:
+      # Test data never needs to survive a restart; running in RAM makes the
+      # migrate-and-truncate cycle substantially faster.
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U aust -d aust_central_test']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:

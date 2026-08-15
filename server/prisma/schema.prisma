@@ -1,0 +1,755 @@
+// AUST Central — database schema
+//
+// Field names and enum members are derived from the Flutter app's existing
+// models and fixtures, so the migration from local mock data to the API is a
+// rename-free mapping wherever possible.
+//
+// Conventions used throughout:
+//   - Primary keys are UUIDs. Sequential integer ids would let anyone holding
+//     one id enumerate their neighbours' rows by incrementing it.
+//   - Every user-owned row carries `userId` and is deleted with its owner.
+//   - Emails are stored pre-lowercased by the service layer rather than using
+//     the `citext` extension, so the schema needs no superuser install step.
+//   - Clock values (class times, departures) are "HH:mm" 24-hour strings:
+//     they are wall-clock campus times with no date or zone, and storing them
+//     as DateTime invites silent UTC shifts on the client.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+enum Role {
+  STUDENT
+  MODERATOR
+  ADMIN
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique
+  passwordHash String
+  name         String
+  studentId    String?
+  department   String?
+  role         Role      @default(STUDENT)
+
+  emailVerifiedAt DateTime?
+
+  // Failed-login throttling state. Kept on the user (not just in the rate
+  // limiter) so an attacker cannot reset it by rotating source IPs.
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+
+  avatarFileId String?     @unique @db.Uuid
+  avatar       FileObject? @relation("UserAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  // Soft delete: content authored by a removed account (notices, messages)
+  // must survive, so rows are retained and filtered instead of dropped.
+  deletedAt DateTime?
+
+  refreshTokens      RefreshToken[]
+  passwordResets     PasswordResetToken[]
+  emailVerifications EmailVerificationToken[]
+  auditLogs          AuditLog[]
+
+  tasks          Task[]
+  classReminders ClassReminder[]
+  semesters      Semester[]
+  labReports     LabReportDraft[]
+
+  notices       Notice[]
+  donorProfile  DonorProfile?
+  bloodRequests BloodRequest[]
+
+  listings          BookListing[]
+  bookmarks         Bookmark[]
+  buyerConversation Conversation[] @relation("ConversationBuyer")
+  sellerConversation Conversation[] @relation("ConversationSeller")
+  messages          Message[]
+  reviewsWritten    SellerReview[] @relation("ReviewAuthor")
+  reviewsReceived   SellerReview[] @relation("ReviewSubject")
+
+  lostFoundItems LostFoundItem[]
+  notifications  Notification[]
+  files          FileObject[]    @relation("FileOwner")
+
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model RefreshToken {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // SHA-256 of the opaque token. The plaintext is shown to the client once and
+  // never persisted, so a database dump cannot be replayed as a session.
+  tokenHash String @unique
+
+  // All tokens descended from a single login share a family. Presenting an
+  // already-rotated token means it leaked, and the whole family is revoked.
+  familyId String @db.Uuid
+
+  expiresAt DateTime
+  revokedAt DateTime?
+  // Set when this token was exchanged, so reuse is detectable after rotation.
+  usedAt    DateTime?
+
+  userAgent String?
+  ip        String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+model AuditLog {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Null for anonymous events (a failed login against an unknown address).
+  actorId String? @db.Uuid
+  actor   User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  action   String
+  entity   String?
+  entityId String?
+  metadata Json?
+
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Academic
+// ---------------------------------------------------------------------------
+
+enum TaskCategory {
+  TODAY
+  LATER
+}
+
+model Task {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title    String
+  note     String       @default("")
+  category TaskCategory @default(TODAY)
+  dueDate  DateTime?
+  isDone   Boolean      @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Covers the default list view: a user's tasks, newest first.
+  @@index([userId, createdAt])
+  // Backs the dashboard's "N due today" count.
+  @@index([userId, isDone, dueDate])
+  @@map("tasks")
+}
+
+enum Weekday {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+enum AssessmentType {
+  QUIZ
+  MID
+  LAB
+}
+
+model ClassReminder {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  courseName String
+  weekday    Weekday
+  classTime  String // "HH:mm", 24-hour
+  isEnabled  Boolean @default(true)
+  minutesBefore Int  @default(10)
+
+  assessments AssessmentReminder[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, weekday])
+  @@map("class_reminders")
+}
+
+model AssessmentReminder {
+  id              String        @id @default(uuid()) @db.Uuid
+  classReminderId String        @db.Uuid
+  classReminder   ClassReminder @relation(fields: [classReminderId], references: [id], onDelete: Cascade)
+
+  type     AssessmentType
+  dateTime DateTime
+
+  createdAt DateTime @default(now())
+
+  @@index([classReminderId])
+  @@map("assessment_reminders")
+}
+
+enum Grade {
+  A_PLUS
+  A
+  A_MINUS
+  B_PLUS
+  B
+  B_MINUS
+  C
+  D
+  F
+}
+
+model Semester {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name     String // "Spring 2023"
+  // Explicit ordering: semester names do not sort chronologically as strings.
+  position Int
+
+  courses CourseGrade[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // A user cannot have two semesters with the same name.
+  @@unique([userId, name])
+  @@index([userId, position])
+  @@map("semesters")
+}
+
+model CourseGrade {
+  id         String   @id @default(uuid()) @db.Uuid
+  semesterId String   @db.Uuid
+  semester   Semester @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+
+  courseName String
+  // Half-credit labs exist (1.5), so this cannot be an integer. Decimal rather
+  // than float: GPA is divided by the credit total and must not drift.
+  credits    Decimal  @db.Decimal(4, 2)
+  grade      Grade
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([semesterId])
+  @@map("course_grades")
+}
+
+model LabReportDraft {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Mirrors the ten controllers in lab_report_screen.dart one-for-one.
+  courseNo        String
+  courseName      String
+  assignmentNo    String
+  performanceDate String
+  submissionDate  String
+  submittedTo     String
+  studentName     String
+  studentId       String
+  group           String
+  section         String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, updatedAt])
+  @@map("lab_report_drafts")
+}
+
+// ---------------------------------------------------------------------------
+// Community
+// ---------------------------------------------------------------------------
+
+enum NoticeCategory {
+  ACADEMIC
+  EXAM
+  EVENT
+  GENERAL
+}
+
+model Notice {
+  id String @id @default(uuid()) @db.Uuid
+
+  title    String
+  body     String
+  category NoticeCategory @default(GENERAL)
+  pinned   Boolean        @default(false)
+  postedAt DateTime       @default(now())
+
+  // Retained when the author's account is removed — a notice outlives staff.
+  authorId String? @db.Uuid
+  author   User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  // The board's default ordering: pinned first, then newest.
+  @@index([deletedAt, pinned, postedAt])
+  @@index([category, postedAt])
+  @@map("notices")
+}
+
+enum BloodGroup {
+  A_POS
+  A_NEG
+  B_POS
+  B_NEG
+  O_POS
+  O_NEG
+  AB_POS
+  AB_NEG
+}
+
+enum BloodUrgency {
+  ROUTINE
+  URGENT
+  CRITICAL
+}
+
+enum BloodRequestStatus {
+  OPEN
+  FULFILLED
+  CANCELLED
+}
+
+model DonorProfile {
+  // One profile per user, so the user id is the primary key outright.
+  userId String @id @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  available   Boolean     @default(false)
+  bloodGroup  BloodGroup?
+  lastDonated DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Finding available donors of a given group is the one hot query here.
+  @@index([available, bloodGroup])
+  @@map("donor_profiles")
+}
+
+model BloodRequest {
+  id          String @id @default(uuid()) @db.Uuid
+  requesterId String @db.Uuid
+  requester   User   @relation(fields: [requesterId], references: [id], onDelete: Cascade)
+
+  patientName   String
+  bloodGroup    BloodGroup
+  hospital      String
+  location      String             @default("")
+  units         Int
+  urgency       BloodUrgency       @default(ROUTINE)
+  requiredBy    DateTime
+  contactNumber String
+  notes         String             @default("")
+  status        BloodRequestStatus @default(OPEN)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, requiredBy])
+  @@index([bloodGroup, status])
+  @@index([requesterId])
+  @@map("blood_requests")
+}
+
+enum BookCondition {
+  NEW
+  LIKE_NEW
+  GOOD
+  FAIR
+  POOR
+}
+
+enum ListingType {
+  SALE
+  SWAP
+  FREE
+}
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  REMOVED
+}
+
+model BookListing {
+  id       String @id @default(uuid()) @db.Uuid
+  sellerId String @db.Uuid
+  seller   User   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  title       String
+  courseCode  String
+  department  String
+  semester    String
+  condition   BookCondition
+  listingType ListingType
+  // Whole taka. Null for SWAP and FREE listings; a CHECK constraint added in
+  // the migration enforces that pairing at the database level.
+  priceBdt    Int?
+  description String        @default("")
+  status      ListingStatus @default(ACTIVE)
+
+  images        BookImage[]
+  bookmarks     Bookmark[]
+  conversations Conversation[]
+  reviews       SellerReview[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Matches the browse screen's filter/sort dimensions.
+  @@index([status, createdAt])
+  @@index([status, department])
+  @@index([status, courseCode])
+  @@index([sellerId, status])
+  @@map("book_listings")
+}
+
+model BookImage {
+  id        String      @id @default(uuid()) @db.Uuid
+  listingId String      @db.Uuid
+  listing   BookListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  fileId String     @db.Uuid
+  file   FileObject @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  position Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@unique([listingId, position])
+  @@index([listingId])
+  @@map("book_images")
+}
+
+model Bookmark {
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  listingId String      @db.Uuid
+  listing   BookListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  // Composite key makes a double-bookmark impossible without a read first.
+  @@id([userId, listingId])
+  @@index([userId, createdAt])
+  @@map("bookmarks")
+}
+
+model Conversation {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Null once a listing is deleted; the thread itself survives.
+  listingId String?      @db.Uuid
+  listing   BookListing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+
+  buyerId String @db.Uuid
+  buyer   User   @relation("ConversationBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+
+  sellerId String @db.Uuid
+  seller   User   @relation("ConversationSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+
+  messages Message[]
+
+  // Denormalised so the inbox can sort without touching the messages table.
+  lastMessageAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+
+  // One thread per buyer, per listing — reopening a chat must not fork it.
+  @@unique([listingId, buyerId])
+  @@index([buyerId, lastMessageAt])
+  @@index([sellerId, lastMessageAt])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid()) @db.Uuid
+  conversationId String       @db.Uuid
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderId String @db.Uuid
+  sender   User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  body   String
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  // Message history pages backwards from newest.
+  @@index([conversationId, createdAt])
+  // Backs the unread badge.
+  @@index([conversationId, readAt])
+  @@map("messages")
+}
+
+model SellerReview {
+  id String @id @default(uuid()) @db.Uuid
+
+  sellerId String @db.Uuid
+  seller   User   @relation("ReviewSubject", fields: [sellerId], references: [id], onDelete: Cascade)
+
+  raterId String @db.Uuid
+  rater   User   @relation("ReviewAuthor", fields: [raterId], references: [id], onDelete: Cascade)
+
+  listingId String?      @db.Uuid
+  listing   BookListing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+
+  // 1-5; range enforced by a CHECK constraint in the migration.
+  rating  Int
+  comment String @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // One review per rater per listing, so ratings cannot be stuffed.
+  @@unique([raterId, listingId])
+  @@index([sellerId, createdAt])
+  @@map("seller_reviews")
+}
+
+enum LostFoundKind {
+  LOST
+  FOUND
+}
+
+enum LostFoundStatus {
+  OPEN
+  CLAIMED
+  RESOLVED
+}
+
+model LostFoundItem {
+  id         String @id @default(uuid()) @db.Uuid
+  reporterId String @db.Uuid
+  reporter   User   @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  name        String
+  kind        LostFoundKind
+  category    String
+  color       String          @default("")
+  room        String          @default("")
+  occurredOn  DateTime
+  description String          @default("")
+  status      LostFoundStatus @default(OPEN)
+
+  images LostFoundImage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, occurredOn])
+  @@index([category, status])
+  @@index([reporterId])
+  @@map("lost_found_items")
+}
+
+model LostFoundImage {
+  id     String        @id @default(uuid()) @db.Uuid
+  itemId String        @db.Uuid
+  item   LostFoundItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  fileId String     @db.Uuid
+  file   FileObject @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  position Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@unique([itemId, position])
+  @@map("lost_found_images")
+}
+
+// ---------------------------------------------------------------------------
+// Transport
+// ---------------------------------------------------------------------------
+
+model BusStop {
+  id   String @id @default(uuid()) @db.Uuid
+  name String @unique
+
+  routeStops    RouteStop[]
+
+  createdAt DateTime @default(now())
+
+  @@map("bus_stops")
+}
+
+model Bus {
+  id           String  @id @default(uuid()) @db.Uuid
+  name         String  @unique // "Meghna - 1"
+  driverName   String?
+  driverNumber String
+  active       Boolean @default(true)
+
+  routeStops RouteStop[]
+  departures Departure[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("buses")
+}
+
+model RouteStop {
+  id String @id @default(uuid()) @db.Uuid
+
+  busId String @db.Uuid
+  bus   Bus    @relation(fields: [busId], references: [id], onDelete: Cascade)
+
+  stopId String  @db.Uuid
+  stop   BusStop @relation(fields: [stopId], references: [id], onDelete: Cascade)
+
+  // Ordinal along the route. Direction matters: a stop earlier in the sequence
+  // than the destination is what makes a from/to pair valid.
+  position Int
+
+  @@unique([busId, position])
+  @@unique([busId, stopId])
+  @@index([stopId])
+  @@map("route_stops")
+}
+
+model Departure {
+  id    String @id @default(uuid()) @db.Uuid
+  busId String @db.Uuid
+  bus   Bus    @relation(fields: [busId], references: [id], onDelete: Cascade)
+
+  departureTime String    @db.VarChar(5) // "HH:mm", 24-hour
+  daysOfWeek    Weekday[]
+
+
+  createdAt DateTime @default(now())
+
+  @@unique([busId, departureTime])
+  @@map("departures")
+}
+
+// ---------------------------------------------------------------------------
+// Platform
+// ---------------------------------------------------------------------------
+
+model FileObject {
+  id      String @id @default(uuid()) @db.Uuid
+  ownerId String @db.Uuid
+  owner   User   @relation("FileOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Relative path under STORAGE_DIR. Generated server-side from a UUID — the
+  // client's filename never influences where bytes land on disk.
+  storageKey String @unique
+  // Kept for display and Content-Disposition only, never for path building.
+  originalName String
+  // The type we detected from magic bytes, not the one the client declared.
+  mime         String
+  sizeBytes    Int
+  sha256       String
+
+  avatarOf       User?            @relation("UserAvatar")
+  bookImages     BookImage[]
+  lostFoundImage LostFoundImage[]
+
+  createdAt DateTime @default(now())
+
+  @@index([ownerId, createdAt])
+  @@index([sha256])
+  @@map("file_objects")
+}
+
+enum NotificationType {
+  NOTICE
+  BLOOD_REQUEST
+  BOOK_MESSAGE
+  LOST_FOUND
+  CLASS_REMINDER
+  SYSTEM
+}
+
+model Notification {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type  NotificationType
+  title String
+  body  String           @default("")
+  // Deep-link target, e.g. { "listingId": "..." }. Rendered by the client, so
+  // it must never carry anything the recipient is not allowed to see.
+  payload Json?
+
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  // Backs the unread-count badge without scanning the user's whole history.
+  @@index([userId, readAt])
+  @@map("notifications")
+}

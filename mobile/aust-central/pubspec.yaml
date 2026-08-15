@@ -1,5 +1,5 @@
 name: aust_track
-description: "A new Flutter project."
+description: "AUST Central — campus companion app for Ahsanullah University students."
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,12 +9,16 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.8
-  google_nav_bar: ^5.0.7
-  google_fonts: ^8.0.2
-  firebase_core: ^4.13.0
-  firebase_auth: ^6.3.0
-  dropdown_search: ^5.0.6
+
+  # --- Backend ---
+  # Firebase has been removed: the AUST Central API server now owns identity
+  # and all feature data. See server/README.md.
+  dio: ^5.7.0
+  # Tokens live in the Keychain / EncryptedSharedPreferences, never in plain
+  # SharedPreferences — which is where the old "Remember Me" wrote the raw
+  # password.
+  flutter_secure_storage: ^9.2.2
+
   shared_preferences: ^2.2.2
   flutter_svg: ^2.0.10
   provider: ^6.1.2
@@ -33,7 +37,6 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/fonts/
-    - assets/images/aust_logo.jpeg
   fonts:
     - family: SpaceGrotesk
       fonts:

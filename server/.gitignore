@@ -1,0 +1,20 @@
+node_modules/
+.env
+.env.*
+!.env.example
+
+# Local upload storage — never commit user files.
+# storage-test/ is written by the upload tests.
+storage/
+storage-test/
+uploads/
+
+# Test + build artefacts
+coverage/
+*.log
+npm-debug.log*
+
+# Prisma generated client
+prisma/generated/
+
+.DS_Store
