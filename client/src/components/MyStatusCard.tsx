@@ -1,10 +1,12 @@
 import { Calendar, ChevronDown } from 'lucide-react';
 import type { DonorProfile } from '../models/bloodRequest';
 import { formatShortDate } from '../models/bloodRequest';
-import { BLOOD_GROUPS } from '../utils/bloodEligibility';
-import { progress, sinceCopy, statusCopy } from '../utils/bloodEligibility';
+import { BLOOD_GROUPS, sinceCopy } from '../utils/bloodEligibility';
 
-// Mirrors MyStatusCard in lib/widgets/my_status_card.dart
+// Mirrors MyStatusCard in lib/views/widgets/my_status_card.dart. Eligibility,
+// progress, and status copy all come straight from the server (see
+// BloodBankContext) — the 90-day rule is evaluated once in the API, not
+// re-derived here, so it cannot drift between screens or clients.
 export default function MyStatusCard({
   profile,
   onChanged,
@@ -16,9 +18,8 @@ export default function MyStatusCard({
   onPickBloodGroup: () => void;
   onPickDate: () => void;
 }) {
-  const { available, bloodGroup, lastDonated } = profile;
-  const eligible = lastDonated !== undefined && progress(lastDonated) >= 1;
-  const progressColor = eligible ? '#0d7a3d' : '#16241d';
+  const { available, bloodGroup, lastDonated, eligible, progress: eligibilityProgress, statusCopy } = profile;
+  const progressColor = eligible ? '#2f8f6a' : '#1b4332';
 
   return (
     <div className="glass glass-sheen rounded-[22px] p-4">
@@ -82,7 +83,7 @@ export default function MyStatusCard({
 
         <div className="mt-3 flex items-center justify-between">
           <span className="text-[13px] font-semibold" style={{ color: progressColor }}>
-            {statusCopy(lastDonated)}
+            {statusCopy}
           </span>
           <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-dim">{sinceCopy(lastDonated)}</span>
         </div>
@@ -90,7 +91,7 @@ export default function MyStatusCard({
           <div
             className="h-full rounded-lg"
             style={{
-              width: `${lastDonated ? progress(lastDonated) * 100 : 0}%`,
+              width: `${eligibilityProgress * 100}%`,
               backgroundColor: progressColor,
             }}
           />

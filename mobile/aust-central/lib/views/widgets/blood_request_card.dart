@@ -336,12 +336,12 @@ UrgencyStyle urgencyStyle(BloodUrgency urgency) {
       return const UrgencyStyle(AppColors.mintChip, AppColors.textDark);
     case BloodUrgency.urgent:
       return const UrgencyStyle(
-        Color(0xFFFCE7CF), // soft amber wash on AppColors.warning border
+        AppColors.warningWash, // soft amber wash on AppColors.warning border
         AppColors.warning,
       );
     case BloodUrgency.critical:
       return const UrgencyStyle(
-        Color(0xFFF6D6D2), // soft red wash on AppColors.danger border
+        AppColors.dangerWash, // soft red wash on AppColors.danger border
         AppColors.danger,
       );
   }

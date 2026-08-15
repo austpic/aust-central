@@ -30,3 +30,15 @@ export interface ClassReminder {
   minutesBefore: number;
   assessments: AssessmentReminder[];
 }
+
+export const WEEKDAYS = [
+  'Saturday',
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+];
+
+export const MINUTE_OPTIONS = [5, 10, 15, 30];

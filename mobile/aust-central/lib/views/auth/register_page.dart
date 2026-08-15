@@ -134,7 +134,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
-                      hintText: "demo@email.com",
+                      hintText: "you@aust.edu",
                       prefixIcon: const Icon(Icons.email_outlined),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),

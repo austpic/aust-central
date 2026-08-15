@@ -1,0 +1,90 @@
+name: CI
+
+# Three independent jobs, one per part of the project (server, Flutter app,
+# web client) — they share one backend but nothing else, so a failure in one
+# should never block feedback on the others.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  server:
+    name: server
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    services:
+      # Matches docker-compose.yml's postgres-test service exactly (same
+      # user/password/db name, same port) so test/global-setup.js needs no
+      # DATABASE_URL override to find it.
+      postgres-test:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: aust
+          POSTGRES_PASSWORD: aust_test_password
+          POSTGRES_DB: aust_central_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U aust -d aust_central_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run lint
+      - run: npm test
+      # Fails the build on a new high/critical advisory in a dependency —
+      # this is exactly how the fast-jwt auth-bypass and nodemailer SMTP
+      # injection advisories should have been caught before merge.
+      - run: npm audit --audit-level=high
+
+  app:
+    name: app (Flutter)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/aust-central
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  web:
+    name: web (client)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc -b
+      - run: npm test
+      - run: npm run build

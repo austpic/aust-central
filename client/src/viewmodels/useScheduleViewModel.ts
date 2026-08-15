@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BUS_SCHEDULES } from '../data/busData';
+import { BUS_SCHEDULES } from '../models/transportation';
 
 // Mirrors _SchedulePageState in lib/screens/schedule_page.dart
 export function useScheduleViewModel() {

@@ -1,6 +1,7 @@
-import { ArrowLeft, MapPin, Phone } from 'lucide-react';
+import { ArrowLeft, BusFront, MapPin, Phone } from 'lucide-react';
 import { Dialog } from '../components/Modal';
 import { useBusSelectionViewModel } from '../viewmodels/useBusSelectionViewModel';
+import { LoadingState, ErrorState } from '../components/AsyncState';
 
 // Mirrors BusSelectionPage in lib/screens/bus_selection_page.dart.
 export default function BusSelectionView() {
@@ -46,41 +47,56 @@ export default function BusSelectionView() {
       <div className="eyebrow-rule mt-6">Available Buses</div>
 
       <div className="mt-4">
-        {vm.buses.map((bus, index) => (
-          <div key={bus.name}>
-            {index > 0 && <div className="h-px bg-glass-border" />}
-            <div className="flex items-center py-3">
-              <div className="glass-accent flex h-[100px] w-[110px] shrink-0 items-center justify-center rounded-[14px] text-center">
-                <span className="px-2 font-display text-[14px] font-bold leading-[1.3] text-mint-ink">
-                  {bus.name}
-                </span>
-              </div>
-              <div className="ml-4 flex-1 space-y-2">
-                <button
-                  type="button"
-                  onClick={() => vm.selectBus(bus)}
-                  className="glass-accent w-full rounded-[30px] py-3 font-display text-[14px] font-bold text-mint-ink transition-transform duration-200 hover:-translate-y-0.5"
-                >
-                  Select
-                </button>
-                <button
-                  type="button"
-                  onClick={() => vm.setRouteDialog(bus)}
-                  className="glass w-full rounded-[30px] py-3 text-[14px] font-bold text-mint-ink"
-                >
-                  Full Route
-                </button>
-                <button
-                  type="button"
-                  onClick={() => vm.setContactDialog(bus)}
-                  className="glass w-full rounded-[30px] py-3 text-[14px] font-bold text-mint-ink"
-                >
-                  Contact
-                </button>
-              </div>
+        {vm.loading ? (
+          <LoadingState />
+        ) : vm.error ? (
+          <ErrorState message={vm.error} onRetry={vm.reload} />
+        ) : vm.buses.length === 0 ? (
+          <div className="py-12 text-center">
+            <div className="glass-tint mx-auto flex h-16 w-16 items-center justify-center rounded-[20px] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+              <BusFront size={28} className="text-mint-ink" />
+            </div>
+            <div className="mt-4 font-display text-[15px] font-bold text-textdark">
+              No buses serve this route on the selected day.
             </div>
           </div>
-        ))}
+        ) : (
+          vm.buses.map((bus, index) => (
+            <div key={bus.name}>
+              {index > 0 && <div className="h-px bg-glass-border" />}
+              <div className="flex items-center py-3">
+                <div className="glass-accent flex h-[100px] w-[110px] shrink-0 items-center justify-center rounded-[14px] text-center">
+                  <span className="px-2 font-display text-[14px] font-bold leading-[1.3] text-mint-ink">
+                    {bus.name}
+                  </span>
+                </div>
+                <div className="ml-4 flex-1 space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => vm.selectBus(bus)}
+                    className="glass-accent w-full rounded-[30px] py-3 font-display text-[14px] font-bold text-mint-ink transition-transform duration-200 hover:-translate-y-0.5"
+                  >
+                    Select
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => vm.setRouteDialog(bus)}
+                    className="glass w-full rounded-[30px] py-3 text-[14px] font-bold text-mint-ink"
+                  >
+                    Full Route
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => vm.setContactDialog(bus)}
+                    className="glass w-full rounded-[30px] py-3 text-[14px] font-bold text-mint-ink"
+                  >
+                    Contact
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Full route dialog */}

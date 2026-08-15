@@ -1,6 +1,8 @@
 import { ArrowLeft, Bell, Search, User } from 'lucide-react';
 import BookCard from '../components/BookCard';
 import { useBookExchangeViewModel } from '../viewmodels/useBookExchangeViewModel';
+import { LoadingState, ErrorState } from '../components/AsyncState';
+import EmptyState from '../components/EmptyState';
 
 // Mirrors BookExchangeScreen in lib/screens/book_exchange/book_exchange_screen.dart.
 export default function BookExchangeView() {
@@ -86,6 +88,8 @@ export default function BookExchangeView() {
         <Search size={22} className="text-dim" />
         <input
           type="text"
+          value={vm.search}
+          onChange={(e) => vm.setSearch(e.target.value)}
           placeholder="Search by title, author, course..."
           className="ml-3 w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-black38"
         />
@@ -110,19 +114,29 @@ export default function BookExchangeView() {
       </div>
 
       {/* Book list */}
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {vm.visibleBooks.map((book) => (
-          <BookCard
-            key={book.id}
-            book={book}
-            bookmarked={vm.isBookmarked(book.id)}
-            onOpen={() => vm.openDetail(book)}
-            onToggleBookmark={() => vm.toggleBookmark(book.id)}
-            onShare={() => vm.copyListingLink(book)}
-            onMessage={() => vm.openChat(book)}
-            onOpenSeller={() => vm.openSeller(book)}
-          />
-        ))}
+      <div className="mt-4">
+        {vm.loading ? (
+          <LoadingState />
+        ) : vm.error ? (
+          <ErrorState message={vm.error} onRetry={vm.reload} />
+        ) : vm.visibleBooks.length === 0 ? (
+          <EmptyState title={vm.emptyMessage} subtitle="Check back soon, or post a book of your own." />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {vm.visibleBooks.map((book) => (
+              <BookCard
+                key={book.id}
+                book={book}
+                bookmarked={vm.isBookmarked(book.id)}
+                onOpen={() => vm.openDetail(book)}
+                onToggleBookmark={() => vm.toggleBookmark(book.id)}
+                onShare={() => vm.copyListingLink(book)}
+                onMessage={() => vm.openChat(book)}
+                onOpenSeller={() => vm.openSeller(book)}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

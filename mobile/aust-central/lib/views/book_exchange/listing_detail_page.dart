@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:aust_track/theme/app_colors.dart';
+import 'package:aust_track/views/widgets/avatars.dart';
 import 'package:aust_track/views/book_exchange/in_app_chat_page.dart';
 import 'package:aust_track/views/book_exchange/seller_profile_page.dart';
 
@@ -27,19 +28,10 @@ class ListingDetailPage extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: Container(
+              child: const BookCoverPlaceholder(
                 height: 220,
                 width: double.infinity,
-                color: AppColors.mintChip,
-                child: Image.asset(
-                  book['image'] ?? '',
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.menu_book_rounded,
-                    color: AppColors.darkGreen,
-                    size: 48,
-                  ),
-                ),
+                radius: 0,
               ),
             ),
             const SizedBox(height: 20),
@@ -72,11 +64,7 @@ class ListingDetailPage extends StatelessWidget {
               },
               child: Row(
                 children: [
-                  const CircleAvatar(
-                    radius: 20,
-                    backgroundColor: AppColors.mintChip,
-                    backgroundImage: AssetImage('assets/images/seller_placeholder.png'),
-                  ),
+                  InitialsAvatar(name: book['seller'] ?? '', radius: 20),
                   const SizedBox(width: 12),
                   Text(
                     book['seller'] ?? '',

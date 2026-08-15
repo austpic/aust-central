@@ -1,17 +1,18 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Mail, LogOut } from 'lucide-react';
 import { useProfileViewModel } from '../viewmodels/useProfileViewModel';
-import { setLoggedIn } from '../utils/auth';
+import { useAuth } from '../viewmodels/AuthContext';
 
-// Mirrors ProfileScreen in lib/screens/profile_screen.dart — avatar initial,
-// name + email, and a details card.
+// Mirrors ProfileScreen in lib/views/profile/profile_screen.dart — avatar
+// initial, name + email, and a details card.
 export default function ProfileView() {
   const vm = useProfileViewModel();
+  const { signOut: endSession } = useAuth();
   const navigate = useNavigate();
 
-  function signOut() {
-    setLoggedIn(false);
-    navigate('/login');
+  async function signOut() {
+    await endSession();
+    navigate('/login', { replace: true });
   }
 
   return (

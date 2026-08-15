@@ -25,14 +25,14 @@ export default function TaskTile({
         aria-label="Toggle task"
         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[7px] border-[1.6px] transition-all duration-150 ${
           task.isDone
-            ? 'border-mint-ink bg-mint shadow-[0_0_10px_rgba(110,242,165,0.4)]'
+            ? 'border-mint-ink bg-mint-ink shadow-[0_0_10px_rgba(47,143,106,0.4)]'
             : 'border-glass-rim bg-white/40'
         }`}
       >
         <Check
           size={12}
           strokeWidth={3.2}
-          className={`text-[#0a1713] transition-opacity duration-150 ${task.isDone ? 'opacity-100' : 'opacity-0'}`}
+          className={`text-white transition-opacity duration-150 ${task.isDone ? 'opacity-100' : 'opacity-0'}`}
         />
       </button>
       <button type="button" onClick={onTap} className="min-w-0 flex-1 text-left">

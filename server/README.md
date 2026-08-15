@@ -105,7 +105,7 @@ Implemented:
 
 Mobile clients read `refreshToken` from the JSON body and store it in the OS keychain; browsers use the httpOnly cookie and ignore the body copy.
 
-Remaining modules (tasks, class reminders, CGPA, lab reports, notices, blood bank, book exchange, lost & found, transport, notifications, files) have their tables and constraints in place and are being built onto this pattern.
+The remaining modules — tasks, class reminders, CGPA, lab reports, notices, blood bank, book exchange, lost & found, transport, notifications, files — follow the same `routes.js`/`service.js`/`schema.js` pattern. See [README.md § 8](../README.md#8-api-reference) for the full endpoint list.
 
 ## Errors
 

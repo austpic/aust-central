@@ -35,7 +35,12 @@ class ApiClient {
                 baseUrl: ApiConfig.baseUrl,
                 connectTimeout: ApiConfig.connectTimeout,
                 receiveTimeout: ApiConfig.receiveTimeout,
-                contentType: Headers.jsonContentType,
+                // Deliberately NOT set globally. A bodyless request that still
+                // declares `application/json` is rejected by the server with
+                // "Body cannot be empty when content-type is set to
+                // 'application/json'", which broke every DELETE and every
+                // bodyless POST/PUT. The header is attached per request below,
+                // only when there is actually a body to describe.
                 // We handle status codes ourselves so non-2xx becomes a typed
                 // ApiException rather than an opaque throw.
                 validateStatus: (status) => status != null && status < 400,
@@ -96,6 +101,7 @@ class ApiClient {
       final response = await Dio(BaseOptions(baseUrl: ApiConfig.baseUrl)).post(
         '/auth/refresh',
         data: {'refreshToken': refreshToken},
+        options: Options(contentType: Headers.jsonContentType),
       );
       final data = response.data as Map;
       await tokens.save(
@@ -115,14 +121,20 @@ class ApiClient {
   Future<dynamic> get(String path, {Map<String, dynamic>? query}) =>
       _send(() => _dio.get(path, queryParameters: _clean(query)));
 
-  Future<dynamic> post(String path, {Object? body}) =>
-      _send(() => _dio.post(path, data: body));
+  /// Options carrying the JSON content type, used only when a body is present.
+  Options get _json => Options(contentType: Headers.jsonContentType);
 
-  Future<dynamic> patch(String path, {Object? body}) =>
-      _send(() => _dio.patch(path, data: body));
+  Future<dynamic> post(String path, {Object? body}) => _send(
+        () => _dio.post(path, data: body, options: body == null ? null : _json),
+      );
 
-  Future<dynamic> put(String path, {Object? body}) =>
-      _send(() => _dio.put(path, data: body));
+  Future<dynamic> patch(String path, {Object? body}) => _send(
+        () => _dio.patch(path, data: body, options: body == null ? null : _json),
+      );
+
+  Future<dynamic> put(String path, {Object? body}) => _send(
+        () => _dio.put(path, data: body, options: body == null ? null : _json),
+      );
 
   Future<dynamic> delete(String path) => _send(() => _dio.delete(path));
 

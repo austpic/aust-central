@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { paginationQuerySchema } from '../../lib/pagination.js';
+import { booleanQuery } from '../../lib/validation.js';
 
 /**
  * Blood groups cross the wire in the display form the app already uses ("A+"),
@@ -103,5 +104,5 @@ export const listBloodRequestsQuerySchema = paginationQuerySchema.extend({
   bloodGroup: bloodGroupSchema.optional(),
   urgency: urgencySchema.optional(),
   status: requestStatusSchema.default('OPEN'),
-  mine: z.coerce.boolean().default(false),
+  mine: booleanQuery(),
 });

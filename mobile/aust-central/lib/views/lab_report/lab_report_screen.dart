@@ -7,17 +7,29 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 
-import 'package:aust_track/data/api/api_exception.dart';
 import 'package:aust_track/data/repositories/academic_repository.dart';
+import 'package:aust_track/viewmodels/lab_report_view_model.dart';
 
-class LabReportScreen extends StatefulWidget {
+class LabReportScreen extends StatelessWidget {
   const LabReportScreen({super.key});
 
   @override
-  State<LabReportScreen> createState() => _LabReportScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => LabReportViewModel(context.read<AcademicRepository>()),
+      child: const _LabReportForm(),
+    );
+  }
 }
 
-class _LabReportScreenState extends State<LabReportScreen> {
+class _LabReportForm extends StatefulWidget {
+  const _LabReportForm();
+
+  @override
+  State<_LabReportForm> createState() => _LabReportScreenState();
+}
+
+class _LabReportScreenState extends State<_LabReportForm> {
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController courseNoController = TextEditingController();
@@ -81,37 +93,25 @@ class _LabReportScreenState extends State<LabReportScreen> {
         'section': sectionController.text.trim(),
       };
 
-  /// Id of the draft being edited, so repeated saves update rather than pile up.
-  String? _draftId;
-  bool _savingDraft = false;
+  late final LabReportViewModel _viewModel;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _viewModel = context.watch<LabReportViewModel>();
+  }
 
   /// Save the form so the same cover page can be regenerated later without
   /// retyping ten fields. The PDF itself is still rendered on-device.
   Future<void> _saveDraft() async {
-    if (_savingDraft) return;
-    setState(() => _savingDraft = true);
-
-    try {
-      final saved = await context.read<AcademicRepository>()
-          .saveLabReport(_draftFields, id: _draftId);
-      if (!mounted) return;
-      setState(() {
-        _draftId = saved['id'] as String;
-        _savingDraft = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Draft saved'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _savingDraft = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating),
-      );
-    }
+    final messenger = ScaffoldMessenger.of(context);
+    final failure = await _viewModel.saveDraft(_draftFields);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(failure ?? 'Draft saved'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void onPreviewPressed() {
@@ -175,7 +175,7 @@ class _LabReportScreenState extends State<LabReportScreen> {
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 20) : null,
-          suffixIcon: isDateField ? const Icon(Icons.calendar_month, color: Color(0xFF407362)) : null,
+          suffixIcon: isDateField ? Icon(Icons.calendar_month, color: CgpaColors.primary) : null,
         ),
         validator: (String? value) {
           if (value == null || value.trim().isEmpty) {
@@ -214,7 +214,7 @@ class _LabReportScreenState extends State<LabReportScreen> {
               height: 4,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF407362), Color(0xFF8CD4B8)],
+                  colors: [CgpaColors.primary, CgpaColors.gradientLight],
                 ),
               ),
             ),
@@ -239,7 +239,7 @@ class _LabReportScreenState extends State<LabReportScreen> {
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF2C3E35),
+                          color: CgpaColors.headingDark,
                         ),
                       ),
                     ],
@@ -366,8 +366,8 @@ class _LabReportScreenState extends State<LabReportScreen> {
                   width: double.infinity,
                   height: 50,
                   child: OutlinedButton.icon(
-                    onPressed: _savingDraft ? null : _saveDraft,
-                    icon: _savingDraft
+                    onPressed: _viewModel.isSaving ? null : _saveDraft,
+                    icon: _viewModel.isSaving
                         ? const SizedBox(
                             width: 18,
                             height: 18,
@@ -375,7 +375,7 @@ class _LabReportScreenState extends State<LabReportScreen> {
                           )
                         : const Icon(Icons.bookmark_border_rounded, size: 20),
                     label: Text(
-                      _draftId == null ? 'Save Draft' : 'Update Draft',
+                      _viewModel.isEditingExisting ? 'Update Draft' : 'Save Draft',
                       style: const TextStyle(
                           fontSize: 15, fontWeight: FontWeight.w600),
                     ),

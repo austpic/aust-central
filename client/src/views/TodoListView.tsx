@@ -8,6 +8,7 @@ import Field from '../components/Field';
 import { useTodoListViewModel } from '../viewmodels/useTodoListViewModel';
 import type { TaskCategory, Task } from '../models/task';
 import { formatTaskDate } from '../models/task';
+import { LoadingState, ErrorState } from '../components/AsyncState';
 
 const FILTERS: { key: 'all' | 'today' | 'later' | 'completed'; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -67,7 +68,7 @@ export default function TodoListView() {
           size={56}
           strokeWidth={6}
           progress={vm.progress}
-          colors={['#B98BF2', '#57C7EC']}
+          colors={['#407362', '#8cd4b8']}
         >
           <span className="font-mono text-[11px] font-bold text-mint-ink">
             {vm.completedCount}/{vm.total}
@@ -103,7 +104,11 @@ export default function TodoListView() {
       </div>
 
       {/* List */}
-      {vm.visibleTasks.length === 0 ? (
+      {vm.loading ? (
+        <LoadingState />
+      ) : vm.error ? (
+        <ErrorState message={vm.error} onRetry={vm.reload} />
+      ) : vm.visibleTasks.length === 0 ? (
         <div className="flex flex-col items-center px-8 py-12 text-center">
           <div className="glass-tint flex h-20 w-20 items-center justify-center rounded-full">
             <Check size={40} className="text-mint-ink" />

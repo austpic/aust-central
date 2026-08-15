@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { paginationQuerySchema } from '../../lib/pagination.js';
+import { booleanQuery } from '../../lib/validation.js';
 
 export const lostFoundKindSchema = z.enum(['LOST', 'FOUND']);
 export const lostFoundStatusSchema = z.enum(['OPEN', 'CLAIMED', 'RESOLVED']);
@@ -51,7 +52,7 @@ export const listLostFoundQuerySchema = paginationQuerySchema.extend({
   category: z.string().trim().max(60).optional(),
   kind: lostFoundKindSchema.optional(),
   status: lostFoundStatusSchema.default('OPEN'),
-  mine: z.coerce.boolean().default(false),
+  mine: booleanQuery(),
 });
 
 export function toLostFoundResponse(row, viewerId) {

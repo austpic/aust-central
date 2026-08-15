@@ -74,7 +74,7 @@ export default function CgpaWhatifView() {
               size={140}
               strokeWidth={10}
               progress={requiredFrac}
-              colors={vm.result.isAchievable ? ['#6EF2A5', '#2BC97A'] : ['#FF6E56', '#C1442D']}
+              colors={vm.result.isAchievable ? ['#407362', '#579d83'] : ['#FF6E56', '#d64545']}
             >
               <span className="font-display text-[32px] font-bold leading-none text-textdark">
                 {vm.result.requiredGpa.toFixed(2)}
@@ -93,13 +93,13 @@ export default function CgpaWhatifView() {
               label="Current CGPA"
               value={vm.result.currentCgpa.toFixed(2)}
               icon={Activity}
-              accentColor="#2BC97A"
+              accentColor="#579d83"
             />
             <StatCard
               label="Required GPA"
               value={vm.result.requiredGpa.toFixed(2)}
               icon={Flag}
-              accentColor={vm.result.isAchievable ? '#0D7A3D' : '#C1442D'}
+              accentColor={vm.result.isAchievable ? '#407362' : '#d64545'}
             />
           </div>
           <div className="mt-4 grid grid-cols-2 gap-4">
@@ -113,7 +113,7 @@ export default function CgpaWhatifView() {
               label="Remaining Cr."
               value={vm.result.remainingCredits.toFixed(0)}
               icon={Hourglass}
-              accentColor="#B45309"
+              accentColor="#e8a838"
             />
           </div>
           <div className="mt-4">

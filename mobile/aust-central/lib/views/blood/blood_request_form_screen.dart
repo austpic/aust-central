@@ -2,27 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import 'package:aust_track/data/api/api_exception.dart';
 import 'package:aust_track/data/models/blood_request.dart';
 import 'package:aust_track/data/repositories/community_repository.dart';
+import 'package:aust_track/viewmodels/blood_request_form_view_model.dart';
 import 'package:aust_track/theme/app_colors.dart';
 import 'package:aust_track/utils/blood_helpers.dart';
 
 /// Submit a blood request. Returns the created [BloodRequest] via
 /// `Navigator.pop` so the launching screen can re-read it from the persistence
 /// layer.
-class BloodRequestFormScreen extends StatefulWidget {
+class BloodRequestFormScreen extends StatelessWidget {
   /// Pre-selects the user's own blood group when they are a known donor.
   final String? defaultBloodGroup;
 
   const BloodRequestFormScreen({super.key, this.defaultBloodGroup});
 
   @override
-  State<BloodRequestFormScreen> createState() =>
-      _BloodRequestFormScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) =>
+          BloodRequestFormViewModel(context.read<CommunityRepository>()),
+      child: _BloodRequestForm(defaultBloodGroup: defaultBloodGroup),
+    );
+  }
 }
 
-class _BloodRequestFormScreenState extends State<BloodRequestFormScreen> {
+class _BloodRequestForm extends StatefulWidget {
+  final String? defaultBloodGroup;
+  const _BloodRequestForm({this.defaultBloodGroup});
+
+  @override
+  State<_BloodRequestForm> createState() => _BloodRequestFormScreenState();
+}
+
+class _BloodRequestFormScreenState extends State<_BloodRequestForm> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _hospital = TextEditingController();
@@ -34,7 +47,6 @@ class _BloodRequestFormScreenState extends State<BloodRequestFormScreen> {
   String? _bloodGroup;
   BloodUrgency _urgency = BloodUrgency.routine;
   DateTime? _requiredBy;
-  bool _submitting = false;
 
   @override
   void initState() {
@@ -96,57 +108,42 @@ class _BloodRequestFormScreenState extends State<BloodRequestFormScreen> {
       );
       return;
     }
-    setState(() => _submitting = true);
 
-    try {
-      // Submitted to the server, so the request is visible to every student —
-      // it previously went only to this device's SharedPreferences, where no
-      // potential donor could ever see it.
-      final created = await context.read<CommunityRepository>()
-          .createBloodRequest(
-        patientName: _name.text.trim(),
-        bloodGroup: _bloodGroup!,
-        hospital: _hospital.text.trim(),
-        location: _location.text.trim(),
-        units: int.tryParse(_units.text.trim()) ?? 1,
-        urgency: _urgency.name.toUpperCase(),
-        requiredBy: _requiredBy!,
-        contactNumber: _contact.text.trim(),
-        notes: _notes.text.trim(),
-      );
+    final viewModel = context.read<BloodRequestFormViewModel>();
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
 
-      if (!mounted) return;
-      Navigator.of(context).pop<BloodRequest>(
-        BloodRequest(
-          // The server assigns the id; the local placeholder is gone.
-          id: created['id'] as String,
-          patientName: created['patientName'] as String,
-          bloodGroup: created['bloodGroup'] as String,
-          hospital: created['hospital'] as String,
-          location: created['location'] as String? ?? '',
-          units: (created['units'] as num).toInt(),
-          urgency: _urgency,
-          requiredBy: DateTime.parse(created['requiredBy'] as String).toLocal(),
-          contactNumber: created['contactNumber'] as String,
-          notes: created['notes'] as String? ?? '',
-        ),
-      );
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          // Field errors from the server are more specific than the form's own
-          // checks (e.g. a malformed contact number).
-          content: Text(e.fieldErrors.values.firstOrNull?.first ?? e.message),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+    final created = await viewModel.submit(
+      patientName: _name.text.trim(),
+      bloodGroup: _bloodGroup!,
+      hospital: _hospital.text.trim(),
+      location: _location.text.trim(),
+      units: int.tryParse(_units.text.trim()) ?? 1,
+      urgency: _urgency,
+      requiredBy: _requiredBy!,
+      contactNumber: _contact.text.trim(),
+      notes: _notes.text.trim(),
+    );
+
+    if (created != null) {
+      navigator.pop<BloodRequest>(created);
+      return;
     }
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(viewModel.errorFor('contactNumber') ??
+            viewModel.errorMessage ??
+            'Could not submit the request.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final viewModel = context.watch<BloodRequestFormViewModel>();
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
@@ -357,7 +354,7 @@ class _BloodRequestFormScreenState extends State<BloodRequestFormScreen> {
             ),
             const SizedBox(height: 8),
             FilledButton(
-              onPressed: _submitting ? null : _submit,
+              onPressed: viewModel.isSubmitting ? null : _submit,
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.darkGreen,
                 foregroundColor: AppColors.white,
@@ -370,7 +367,7 @@ class _BloodRequestFormScreenState extends State<BloodRequestFormScreen> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              child: _submitting
+              child: viewModel.isSubmitting
                   ? const SizedBox(
                       width: 22,
                       height: 22,

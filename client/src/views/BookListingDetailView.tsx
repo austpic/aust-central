@@ -1,9 +1,26 @@
 import { ArrowLeft, BookOpen, MessageCircle, Star } from 'lucide-react';
 import { useBookListingDetailViewModel } from '../viewmodels/useBookListingDetailViewModel';
+import { LoadingState, ErrorState } from '../components/AsyncState';
 
 // Mirrors ListingDetailPage in lib/screens/book_exchange/listing_detail_page.dart.
 export default function BookListingDetailView() {
   const vm = useBookListingDetailViewModel();
+
+  if (vm.loading) {
+    return (
+      <div className="mx-auto max-w-3xl px-5 py-10">
+        <LoadingState />
+      </div>
+    );
+  }
+
+  if (vm.error) {
+    return (
+      <div className="mx-auto max-w-3xl px-5 py-10">
+        <ErrorState message={vm.error} onRetry={vm.reload} />
+      </div>
+    );
+  }
 
   if (!vm.book) {
     return (

@@ -5,11 +5,11 @@ import type { SemesterRecord } from '../models/courseGrade';
 import type { LucideIcon } from 'lucide-react';
 
 function gpaColor(gpa: number): string {
-  if (gpa >= 3.75) return '#0D7A3D';
-  if (gpa >= 3.5) return '#2BC97A';
+  if (gpa >= 3.75) return '#2e7d5b';
+  if (gpa >= 3.5) return '#579d83';
   if (gpa >= 3.0) return '#0369A1';
-  if (gpa >= 2.5) return '#B45309';
-  return '#C1442D';
+  if (gpa >= 2.5) return '#e8a838';
+  return '#d64545';
 }
 
 function gpaIcon(gpa: number): LucideIcon {
@@ -46,7 +46,7 @@ export default function CgpaHistoryView() {
 
       {/* Summary hero */}
       <div className="glass glass-sheen mt-4 flex items-center gap-5 p-6">
-        <ProgressRing size={112} strokeWidth={10} progress={cumulativeFrac} colors={['#6EF2A5', '#57C7EC', '#B98BF2']}>
+        <ProgressRing size={112} strokeWidth={10} progress={cumulativeFrac} colors={['#407362', '#57C7EC', '#B98BF2']}>
           <span className="font-display text-[24px] font-bold leading-none text-textdark">
             {latest ? latest.cumulativeCgpa.toFixed(2) : '—'}
           </span>
@@ -125,7 +125,7 @@ function TimelineCard({
         <div className="mt-4 flex items-center">
           <GpaStat label="Semester GPA" value={record.semesterGpa.toFixed(2)} color={color} />
           <div className="mx-6 h-9 w-[1.5px] bg-glass-border" />
-          <GpaStat label="Cumulative CGPA" value={record.cumulativeCgpa.toFixed(2)} color="#2BC97A" />
+          <GpaStat label="Cumulative CGPA" value={record.cumulativeCgpa.toFixed(2)} color="#579d83" />
         </div>
       </div>
     </div>

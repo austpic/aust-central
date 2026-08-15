@@ -98,7 +98,6 @@ class BookExchangeViewModel extends BaseViewModel {
       'sellerId': seller['id'] as String,
       // No reviews yet means no rating — a dash, not an invented 4.9.
       'rating': rating == null ? '—' : rating.toString(),
-      'image': 'assets/images/book_placeholder.png',
     };
   }
 

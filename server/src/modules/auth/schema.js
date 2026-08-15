@@ -12,6 +12,11 @@ import { env } from '../../config/env.js';
 /**
  * Emails are lowercased and trimmed at the edge so that "A@x.com" and
  * "a@x.com" cannot become two accounts. Storage assumes this has happened.
+ *
+ * The domain check applies everywhere this schema is used — register, login,
+ * forgot-password, resend-verification — not just at signup. Only an
+ * `@ALLOWED_EMAIL_DOMAIN` address is a valid AUST Central account at all, full
+ * stop; there is no grandfathering for accounts created under a looser policy.
  */
 export const emailSchema = z
   .string()
@@ -23,7 +28,7 @@ export const emailSchema = z
   .max(254)
   .refine(
     (value) => !env.ALLOWED_EMAIL_DOMAIN || value.endsWith(`@${env.ALLOWED_EMAIL_DOMAIN}`),
-    { message: `Registration is restricted to @${env.ALLOWED_EMAIL_DOMAIN} addresses` },
+    { message: `Only @${env.ALLOWED_EMAIL_DOMAIN} email addresses are accepted` },
   );
 
 /**
@@ -64,9 +69,12 @@ export const registerBodySchema = z
 
 export const loginBodySchema = z
   .object({
-    // Not `passwordSchema`: an existing password predating a policy change
-    // must still be accepted at login, or we lock people out of their accounts.
     email: emailSchema,
+    // Not `passwordSchema`: an existing password predating a *password*
+    // policy change must still be accepted at login, or we lock people out
+    // of their accounts. The email domain restriction is different — it is
+    // not a strength policy that only new signups need to meet, it is which
+    // accounts are allowed to exist at all.
     password: z.string().min(1, 'Password is required').max(72),
   })
   .strict();

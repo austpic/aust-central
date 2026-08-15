@@ -1,10 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { setLoggedIn } from '../utils/auth';
 
-// Mirrors RegisterPage in lib/register_page.dart (mock auth).
+import { useAuth, authErrorMessage } from './AuthContext';
+import { ApiError } from '../api/errors';
+
+// Mirrors RegisterPage in lib/views/auth/register_page.dart — real auth
+// against the API. The server enforces a stronger password policy (≥10
+// chars, mixed case, a digit) than this screen's old 6-character check, and
+// returns per-field messages on failure.
 export function useRegisterViewModel() {
   const navigate = useNavigate();
+  const { register } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -12,7 +18,7 @@ export function useRegisterViewModel() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  function register() {
+  async function submit() {
     if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
       setMessage('Please fill in all fields.');
       return;
@@ -21,16 +27,16 @@ export function useRegisterViewModel() {
       setMessage('Passwords do not match.');
       return;
     }
-    if (password.length < 6) {
-      setMessage('Password must be at least 6 characters.');
-      return;
-    }
     setIsLoading(true);
-    setTimeout(() => {
-      setLoggedIn(true);
-      setMessage('Account created successfully!');
+    try {
+      await register({ name: name.trim(), email: email.trim(), password });
       navigate('/home', { replace: true });
-    }, 600);
+    } catch (error) {
+      const fieldError = error instanceof ApiError ? error.errorFor('password') : undefined;
+      setMessage(fieldError ?? authErrorMessage(error));
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function clearMessage() {
@@ -48,7 +54,7 @@ export function useRegisterViewModel() {
     setConfirmPassword,
     isLoading,
     message,
-    register,
+    register: submit,
     clearMessage,
   };
 }

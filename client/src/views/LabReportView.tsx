@@ -227,7 +227,7 @@ function SectionCard({
     <div className="glass glass-sheen mb-6 overflow-hidden rounded-[20px] transition-shadow duration-200 hover:shadow-glass-lg">
       <div
         className="h-1"
-        style={{ background: 'linear-gradient(90deg, #2BC97A 0%, #0D7A3D 100%)' }}
+        style={{ background: 'linear-gradient(90deg, #407362 0%, #8cd4b8 100%)' }}
       />
       <div className="p-5">
         <div className="flex items-center">

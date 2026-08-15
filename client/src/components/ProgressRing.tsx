@@ -9,7 +9,7 @@ export default function ProgressRing({
   size = 150,
   strokeWidth = 10,
   progress,
-  colors = ['#6EF2A5', '#57C7EC', '#B98BF2'],
+  colors = ['#2f8f6a', '#57C7EC', '#B98BF2'],
   trackColor = 'rgba(16,36,26,0.10)',
   children,
   className = '',

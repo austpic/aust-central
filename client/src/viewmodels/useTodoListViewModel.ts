@@ -1,7 +1,27 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Task, TaskCategory, TaskFilter } from '../models/task';
+import { academicRepository } from '../repositories/academic';
+import { ApiError } from '../api/errors';
 
-// Mirrors _TodoListScreenState in lib/screens/todo_list_screen.dart
+// Mirrors _TodoListScreenState in lib/views/tasks/todo_list_screen.dart —
+// server-backed now. Tasks used to live only in this hook's React state, so
+// they vanished on every reload; they now persist per user.
+
+function toApiCategory(category: TaskCategory): string {
+  return category === 'later' ? 'LATER' : 'TODAY';
+}
+
+function fromJson(json: Record<string, unknown>): Task {
+  return {
+    id: json.id as string,
+    title: json.title as string,
+    note: (json.note as string) ?? '',
+    category: json.category === 'LATER' ? 'later' : 'today',
+    dueDate: json.dueDate ? new Date(json.dueDate as string) : undefined,
+    isDone: Boolean(json.isDone),
+  };
+}
+
 export function useTodoListViewModel() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filter, setFilter] = useState<TaskFilter>('all');
@@ -9,11 +29,25 @@ export function useTodoListViewModel() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Task | null>(null);
-  const idCounter = useMemo(() => ({ n: 0 }), []);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  function newId() {
-    return `task_${Date.now()}_${idCounter.n++}`;
-  }
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { items } = await academicRepository.listTasks();
+      setTasks(items.map(fromJson));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not load your tasks.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const visibleTasks = useMemo(() => {
     switch (filter) {
@@ -47,46 +81,74 @@ export function useTodoListViewModel() {
     setEditingTask(null);
   }
 
-  function saveForm(result: {
+  async function saveForm(result: {
     title: string;
     note: string;
     category: TaskCategory;
     dueDate?: Date;
     delete: boolean;
   }) {
-    if (result.delete && editingTask) {
-      setTasks((prev) => prev.filter((t) => t.id !== editingTask.id));
+    try {
+      if (result.delete && editingTask) {
+        await academicRepository.deleteTask(editingTask.id);
+        setTasks((prev) => prev.filter((t) => t.id !== editingTask.id));
+        closeForm();
+        return;
+      }
+      if (editingTask) {
+        const updated = await academicRepository.updateTask(editingTask.id, {
+          title: result.title,
+          note: result.note,
+          category: toApiCategory(result.category),
+          dueDate: result.dueDate ? result.dueDate.toISOString() : null,
+        });
+        setTasks((prev) => prev.map((t) => (t.id === editingTask.id ? fromJson(updated) : t)));
+      } else {
+        // The id is server-assigned, so the local list and the database agree
+        // — the previous `task_<millis>` id existed nowhere but this hook.
+        const created = await academicRepository.createTask({
+          title: result.title,
+          note: result.note,
+          category: toApiCategory(result.category),
+          dueDate: result.dueDate?.toISOString(),
+        });
+        setTasks((prev) => [fromJson(created), ...prev]);
+      }
       closeForm();
-      return;
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not save the task.');
     }
-    if (editingTask) {
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === editingTask.id
-            ? { ...t, title: result.title, note: result.note, category: result.category, dueDate: result.dueDate }
-            : t,
-        ),
-      );
-    } else {
-      setTasks((prev) => [
-        { id: newId(), title: result.title, note: result.note, category: result.category, dueDate: result.dueDate, isDone: false },
-        ...prev,
-      ]);
-    }
-    closeForm();
   }
 
-  function toggleDone(id: string) {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, isDone: !t.isDone } : t)));
+  async function toggleDone(id: string) {
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+    const next = !task.isDone;
+
+    // Optimistic: flip immediately, roll back if the write fails.
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, isDone: next } : t)));
+    try {
+      await academicRepository.updateTask(id, { isDone: next });
+    } catch (err) {
+      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, isDone: !next } : t)));
+      setError(err instanceof ApiError ? err.message : 'Could not update the task.');
+    }
   }
 
   function requestDelete(task: Task) {
     setConfirmDelete(task);
   }
 
-  function confirmDeleteTask() {
+  async function confirmDeleteTask() {
     if (confirmDelete) {
-      setTasks((prev) => prev.filter((t) => t.id !== confirmDelete.id));
+      const id = confirmDelete.id;
+      setTasks((prev) => prev.filter((t) => t.id !== id));
+      try {
+        await academicRepository.deleteTask(id);
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : 'Could not delete the task.');
+        await load();
+      }
     }
     setConfirmDelete(null);
   }
@@ -99,9 +161,18 @@ export function useTodoListViewModel() {
     if (tasks.length > 0) setConfirmClear(true);
   }
 
-  function confirmClearAll() {
+  async function confirmClearAll() {
+    const doomed = tasks;
     setTasks([]);
     setConfirmClear(false);
+    try {
+      // No bulk-delete endpoint: deleting individually keeps the server's
+      // per-row ownership check on every one of them.
+      await Promise.all(doomed.map((t) => academicRepository.deleteTask(t.id)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not clear all tasks.');
+      await load();
+    }
   }
 
   function cancelClear() {
@@ -120,6 +191,9 @@ export function useTodoListViewModel() {
     editingTask,
     confirmClear,
     confirmDelete,
+    loading,
+    error,
+    reload: load,
     openNewForm,
     openEditForm,
     closeForm,

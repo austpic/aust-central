@@ -5,9 +5,10 @@ import { Dialog } from '../components/Modal';
 import Field from '../components/Field';
 import SectionLabel from '../components/SectionLabel';
 import { useClassReminderViewModel } from '../viewmodels/useClassReminderViewModel';
-import { WEEKDAYS } from '../data/classReminders';
+import { LoadingState, ErrorState } from '../components/AsyncState';
 import {
   ASSESSMENT_TYPES,
+  WEEKDAYS,
   type AssessmentTypeName,
 } from '../models/classReminder';
 
@@ -54,15 +55,21 @@ export default function ClassReminderView() {
         <SectionLabel label="Your Courses" count={vm.reminders.length} />
       </div>
       <div className="mt-4 grid grid-cols-1 gap-4">
-        {vm.reminders.map((reminder, index) => (
-          <ReminderCard
-            key={index}
-            reminder={reminder}
-            onCardTap={() => vm.setAssessmentDialogIndex(index)}
-            onToggle={() => vm.toggleReminder(index)}
-            onMinutesChanged={(minutes) => vm.updateMinutesBefore(index, minutes)}
-          />
-        ))}
+        {vm.loading ? (
+          <LoadingState />
+        ) : vm.error ? (
+          <ErrorState message={vm.error} onRetry={vm.reload} />
+        ) : (
+          vm.reminders.map((reminder, index) => (
+            <ReminderCard
+              key={index}
+              reminder={reminder}
+              onCardTap={() => vm.setAssessmentDialogIndex(index)}
+              onToggle={() => vm.toggleReminder(index)}
+              onMinutesChanged={(minutes) => vm.updateMinutesBefore(index, minutes)}
+            />
+          ))
+        )}
       </div>
 
       {vm.isSaved && (

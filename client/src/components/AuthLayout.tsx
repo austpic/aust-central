@@ -42,7 +42,7 @@ function MobileBanner() {
     <div className="relative overflow-hidden lg:hidden">
       <div
         className="absolute inset-0"
-        style={{ background: 'linear-gradient(150deg,#2bc97a 0%,#0d7a3d 100%)' }}
+        style={{ background: 'linear-gradient(150deg,#2f8f6a 0%,#1b4332 100%)' }}
       />
       <svg
         viewBox="0 0 400 240"
@@ -88,7 +88,7 @@ function DecorativePanel() {
     <div className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12 lg:pb-14 lg:pr-14 lg:pt-10">
       <div
         className="absolute inset-0"
-        style={{ background: 'linear-gradient(150deg,#2bc97a 0%,#0d7a3d 100%)' }}
+        style={{ background: 'linear-gradient(150deg,#2f8f6a 0%,#1b4332 100%)' }}
       />
       <svg
         viewBox="0 0 800 800"

@@ -12,7 +12,7 @@ export default function InfoCard({
   icon: LucideIcon;
   isSuccess?: boolean;
 }) {
-  const accent = isSuccess ? '#0D7A3D' : '#B45309';
+  const accent = isSuccess ? '#2e7d5b' : '#e8a838';
   return (
     <div
       className="glass w-full rounded-[18px] p-6"

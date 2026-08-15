@@ -1,4 +1,20 @@
-import { ZodType } from 'zod';
+import { z, ZodType } from 'zod';
+
+/**
+ * A boolean that arrives as a query string.
+ *
+ * NOT `z.coerce.boolean()`. That runs JS `Boolean(value)`, and every non-empty
+ * string is truthy — so `?mine=false` parses as **true**, silently inverting
+ * the filter. Only the literal strings below are accepted.
+ *
+ * @param {boolean} [defaultValue=false]
+ */
+export function booleanQuery(defaultValue = false) {
+  return z
+    .enum(['true', 'false', '1', '0'])
+    .default(defaultValue ? 'true' : 'false')
+    .transform((value) => value === 'true' || value === '1');
+}
 
 /**
  * Wires Zod into Fastify's schema slots.

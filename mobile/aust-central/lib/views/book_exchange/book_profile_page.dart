@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:aust_track/theme/app_colors.dart';
+import 'package:aust_track/views/widgets/avatars.dart';
 
 class BookProfilePage extends StatelessWidget {
   const BookProfilePage({super.key});
@@ -22,11 +23,7 @@ class BookProfilePage extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           children: [
             const Center(
-              child: CircleAvatar(
-                radius: 44,
-                backgroundColor: AppColors.mintChip,
-                backgroundImage: AssetImage('assets/images/avatar_placeholder.png'),
-              ),
+              child: InitialsAvatar(name: 'Your Name', radius: 44),
             ),
             const SizedBox(height: 14),
             const Center(

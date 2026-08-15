@@ -1,7 +1,12 @@
-// Mirrors lib/utils/blood_eligibility.dart — donor eligibility + shared lists.
-// Also exports the urgency visual-style mapping used by request cards.
-export const DONATION_INTERVAL_DAYS = 90;
-
+/**
+ * Local date helpers for the donor form.
+ *
+ * NOT the source of truth for eligibility — the server evaluates the 90-day
+ * rule and returns the verdict on DonorProfile (eligible, daysUntilEligible,
+ * progress, statusCopy). What remains here is the date-picker clamp and
+ * display formatting, which are client concerns. Also exports the urgency
+ * visual-style mapping used by request cards.
+ */
 export const BLOOD_GROUPS = [
   'A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-',
 ];
@@ -10,34 +15,11 @@ function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-export function daysSince(lastDonated: Date, now?: Date): number {
+function daysSince(lastDonated: Date, now?: Date): number {
   const n = now ?? new Date();
   const last = startOfDay(lastDonated);
   const today = startOfDay(n);
   return Math.floor((today.getTime() - last.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-export function daysUntilEligible(lastDonated: Date, now?: Date): number {
-  const remaining = DONATION_INTERVAL_DAYS - daysSince(lastDonated, now);
-  return remaining < 0 ? 0 : remaining;
-}
-
-export function isEligible(lastDonated: Date, now?: Date): boolean {
-  return daysUntilEligible(lastDonated, now) === 0;
-}
-
-export function progress(lastDonated: Date, now?: Date): number {
-  const since = daysSince(lastDonated, now);
-  if (since <= 0) return 0;
-  if (since >= DONATION_INTERVAL_DAYS) return 1;
-  return since / DONATION_INTERVAL_DAYS;
-}
-
-export function statusCopy(lastDonated?: Date, now?: Date): string {
-  if (!lastDonated) return 'No donation recorded yet';
-  if (isEligible(lastDonated, now)) return 'Eligible to donate now';
-  const left = daysUntilEligible(lastDonated, now);
-  return `${left} day${left === 1 ? '' : 's'} until eligible`;
 }
 
 export function sinceCopy(lastDonated?: Date, now?: Date): string {

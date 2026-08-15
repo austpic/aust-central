@@ -158,7 +158,7 @@ class _PinnedNoticeBody extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
               gradient: const LinearGradient(
-                colors: [Color(0xFF2C8E6C), Color(0xFF339974)],
+                colors: [AppColors.noticeGradientStart, AppColors.noticeGradientEnd],
                 begin: Alignment.bottomLeft,
                 end: Alignment.topRight,
               ),

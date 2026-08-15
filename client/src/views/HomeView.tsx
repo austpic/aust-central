@@ -40,7 +40,9 @@ export default function HomeView() {
           className="glass relative flex h-12 w-12 items-center justify-center rounded-[14px] text-mint-ink transition-transform duration-200 hover:-translate-y-0.5"
         >
           <Bell size={22} />
-          <span className="absolute right-3 top-3 h-[7px] w-[7px] rounded-full bg-coral shadow-[0_0_8px_2px_rgba(255,110,86,0.6)]" />
+          {vm.unreadNotifications > 0 && (
+            <span className="absolute right-3 top-3 h-[7px] w-[7px] rounded-full bg-coral shadow-[0_0_8px_2px_rgba(255,110,86,0.6)]" />
+          )}
         </button>
       </div>
 
@@ -50,8 +52,8 @@ export default function HomeView() {
           pillLabel="Live"
           live
           who="Notice board"
-          title="Mid-term routine released"
-          sub="Section B — full schedule is up on the Notice Board."
+          title={vm.noticeTitle}
+          sub={vm.noticeBody}
           footerIcon={<Megaphone size={14} />}
           footerText="View notice board"
           onTap={vm.goToNoticeBoard}

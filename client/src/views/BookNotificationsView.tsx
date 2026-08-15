@@ -1,5 +1,6 @@
 import { ArrowLeft, Bell } from 'lucide-react';
 import { useBookNotificationsViewModel } from '../viewmodels/useBookNotificationsViewModel';
+import { LoadingState, ErrorState } from '../components/AsyncState';
 
 // Mirrors BookNotificationPage in lib/screens/book_exchange/book_notification_page.dart.
 export default function BookNotificationsView() {
@@ -21,7 +22,11 @@ export default function BookNotificationsView() {
       </div>
 
       <div className="mt-4">
-        {vm.notifications.length === 0 ? (
+        {vm.loading ? (
+          <LoadingState />
+        ) : vm.error ? (
+          <ErrorState message={vm.error} onRetry={vm.reload} />
+        ) : vm.notifications.length === 0 ? (
           <div className="py-12 text-center">
             <div className="glass-tint mx-auto flex h-16 w-16 items-center justify-center rounded-[20px] text-mint-ink">
               <Bell size={28} />

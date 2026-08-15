@@ -4,6 +4,7 @@ import FilterChip from '../components/FilterChip';
 import EmptyState from '../components/EmptyState';
 import { useNoticeBoardViewModel } from '../viewmodels/useNoticeBoardViewModel';
 import { NOTICE_CATEGORIES, type NoticeCategoryName } from '../models/notice';
+import { LoadingState, ErrorState } from '../components/AsyncState';
 import type { ReactNode } from 'react';
 
 const CATEGORY_ICONS: Record<NoticeCategoryName, ReactNode> = {
@@ -63,7 +64,11 @@ export default function NoticeBoardView() {
 
       {/* Notices */}
       <div className="mt-4 grid grid-cols-1 gap-4">
-        {vm.notices.length === 0 ? (
+        {vm.loading ? (
+          <LoadingState />
+        ) : vm.error ? (
+          <ErrorState message={vm.error} onRetry={vm.reload} />
+        ) : vm.notices.length === 0 ? (
           <EmptyState />
         ) : (
           vm.notices.map((notice) => (

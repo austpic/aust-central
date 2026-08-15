@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/Toast';
-import type { BloodRequest, BloodUrgencyName } from '../models/bloodRequest';
+import type { BloodUrgencyName } from '../models/bloodRequest';
 import { BLOOD_URGENCIES } from '../models/bloodRequest';
 import { BLOOD_GROUPS } from '../utils/bloodEligibility';
 import { useBloodBankContext } from './BloodBankContext';
+import { communityRepository } from '../repositories/community';
+import { ApiError } from '../api/errors';
 
-// Mirrors _BloodRequestFormScreenState in lib/screens/blood_request_form_screen.dart
+// Mirrors _BloodRequestFormScreenState in
+// lib/views/blood/blood_request_form_screen.dart — submits to the server, so
+// the request is visible to every student. It previously went only into this
+// device's context state, where no potential donor could ever see it.
 export function useBloodRequestFormViewModel() {
   const navigate = useNavigate();
   const toast = useToast();
@@ -22,10 +27,11 @@ export function useBloodRequestFormViewModel() {
   const [contact, setContact] = useState('');
   const [notes, setNotes] = useState('');
   const [requiredByError, setRequiredByError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const isBdPhone = (raw: string): boolean => /^\+?8801[3-9]\d{8}$|^01[3-9]\d{8}$/.test(raw.trim());
 
-  function submit() {
+  async function submit() {
     const trimmedName = name.trim();
     const trimmedHospital = hospital.trim();
     const trimmedContact = contact.trim();
@@ -40,29 +46,43 @@ export function useBloodRequestFormViewModel() {
       requiredBy !== null &&
       isBdPhone(trimmedContact);
 
-    if (requiredBy === null) {
-      setRequiredByError(true);
-    } else {
-      setRequiredByError(false);
+    setRequiredByError(requiredBy === null);
+    if (!valid || requiredBy === null || bloodGroup === null || submitting) return;
+
+    setSubmitting(true);
+    try {
+      const created = await communityRepository.createBloodRequest({
+        patientName: trimmedName,
+        bloodGroup,
+        hospital: trimmedHospital,
+        location: location.trim(),
+        units: unitCount,
+        urgency: urgency.toUpperCase(),
+        requiredBy: requiredBy.toISOString(),
+        contactNumber: trimmedContact,
+        notes: notes.trim(),
+      });
+
+      bank.addMyRequest({
+        id: created.id,
+        patientName: created.patientName,
+        bloodGroup: created.bloodGroup,
+        hospital: created.hospital,
+        location: created.location ?? '',
+        units: created.units,
+        urgency,
+        requiredBy: new Date(created.requiredBy),
+        contactNumber: created.contactNumber,
+        notes: created.notes ?? '',
+      });
+      toast('Request submitted successfully!', 'success');
+      navigate(-1);
+    } catch (error) {
+      const fieldError = error instanceof ApiError ? error.errorFor('contactNumber') : undefined;
+      toast(fieldError ?? (error instanceof ApiError ? error.message : 'Could not submit the request.'), 'error');
+    } finally {
+      setSubmitting(false);
     }
-    if (!valid || requiredBy === null || bloodGroup === null) return;
-
-    const request: BloodRequest = {
-      id: `mine_${Date.now()}`,
-      patientName: trimmedName,
-      bloodGroup,
-      hospital: trimmedHospital,
-      location: location.trim(),
-      units: unitCount,
-      urgency,
-      requiredBy,
-      contactNumber: trimmedContact,
-      notes: notes.trim(),
-    };
-
-    bank.addMyRequest(request);
-    toast('Request submitted successfully!', 'success');
-    navigate(-1);
   }
 
   function pickRequiredBy(date: Date) {
@@ -92,6 +112,7 @@ export function useBloodRequestFormViewModel() {
     setNotes,
     bloodGroups: BLOOD_GROUPS,
     urgencies: BLOOD_URGENCIES,
+    submitting,
     submit,
   };
 }

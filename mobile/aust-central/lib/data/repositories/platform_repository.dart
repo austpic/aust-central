@@ -70,9 +70,13 @@ class PlatformRepository {
     return _list(data);
   }
 
-  Future<List<Map<String, dynamic>>> notifications({bool unreadOnly = false}) async {
+  Future<List<Map<String, dynamic>>> notifications({
+    bool unreadOnly = false,
+    String? type,
+  }) async {
     final data = await _client.get('/notifications', query: {
       'unreadOnly': unreadOnly,
+      if (type != null) 'type': type,
       'limit': 50,
     });
     return List<Map<String, dynamic>>.from(

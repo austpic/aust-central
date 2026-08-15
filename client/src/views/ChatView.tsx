@@ -1,10 +1,27 @@
 import { ArrowLeft, BookOpen, Phone, Plus, Smile, Send } from 'lucide-react';
 import { useChatViewModel } from '../viewmodels/useChatViewModel';
+import { LoadingState, ErrorState } from '../components/AsyncState';
 
 // Mirrors InAppChatPage in lib/screens/book_exchange/in_app_chat_page.dart.
 export default function ChatView() {
   const vm = useChatViewModel();
   const hasBook = vm.book !== undefined;
+
+  if (vm.loading) {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-5 py-10">
+        <LoadingState />
+      </div>
+    );
+  }
+
+  if (vm.error && vm.messages.length === 0) {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-5 py-10">
+        <ErrorState message={vm.error} onRetry={() => window.location.reload()} />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex min-h-svh w-full max-w-3xl flex-col">

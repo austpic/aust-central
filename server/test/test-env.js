@@ -26,6 +26,13 @@ export function applyTestEnv() {
   process.env.CORS_ORIGINS ??= 'http://localhost:3000';
   process.env.STORAGE_DIR ??= './storage-test';
 
+  // Forced, not defaulted: every test that creates a user registers with an
+  // @example.com address (test/helpers/auth.js), so a developer's local
+  // ALLOWED_EMAIL_DOMAIN=aust.edu must never leak in from .env and break the
+  // whole suite. Setting it here — before src/config/env.js ever loads
+  // .env — wins, since loadEnvFile does not overwrite values already present.
+  process.env.ALLOWED_EMAIL_DOMAIN = '';
+
   // Effectively disable throttling by default so functional tests are not
   // flaky. The auth suite re-enables real limits for the cases that need them.
   process.env.RATE_LIMIT_MAX ??= '100000';

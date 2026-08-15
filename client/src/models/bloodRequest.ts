@@ -31,16 +31,30 @@ export interface BloodRequest {
   notes: string;
 }
 
+/**
+ * Carries the SERVER's eligibility verdict rather than deriving one — the
+ * 90-day donation interval is a medical rule, evaluated once in the API so
+ * every client renders the same answer. See utils/bloodEligibility.ts, which
+ * now holds only display formatting, not the rule itself.
+ */
 export interface DonorProfile {
   available: boolean;
   bloodGroup?: string;
   lastDonated?: Date;
+  eligible: boolean;
+  daysUntilEligible: number;
+  progress: number;
+  statusCopy: string;
 }
 
 export const EMPTY_DONOR_PROFILE: DonorProfile = {
   available: false,
   bloodGroup: undefined,
   lastDonated: undefined,
+  eligible: true,
+  daysUntilEligible: 0,
+  progress: 1,
+  statusCopy: 'No donation recorded yet',
 };
 
 // Two-letter initials used in the request card avatar (BloodRequest.initials)

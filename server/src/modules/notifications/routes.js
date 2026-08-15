@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { notFoundOrForbidden } from '../../lib/errors.js';
 import { pageResponseSchema, paginationQuerySchema, toPage, toPrismaPage } from '../../lib/pagination.js';
+import { booleanQuery } from '../../lib/validation.js';
 
 /**
  * Notifications. Gives notifications_screen.dart — currently a 19-line
@@ -13,11 +14,13 @@ import { pageResponseSchema, paginationQuerySchema, toPage, toPrismaPage } from 
 
 const idParams = z.object({ id: z.string().uuid() });
 
+const notificationTypeSchema = z.enum([
+  'NOTICE', 'BLOOD_REQUEST', 'BOOK_MESSAGE', 'LOST_FOUND', 'CLASS_REMINDER', 'SYSTEM',
+]);
+
 const notificationResponseSchema = z.object({
   id: z.string().uuid(),
-  type: z.enum([
-    'NOTICE', 'BLOOD_REQUEST', 'BOOK_MESSAGE', 'LOST_FOUND', 'CLASS_REMINDER', 'SYSTEM',
-  ]),
+  type: notificationTypeSchema,
   title: z.string(),
   body: z.string(),
   payload: z.any().nullable(),
@@ -26,7 +29,8 @@ const notificationResponseSchema = z.object({
 });
 
 const listQuerySchema = paginationQuerySchema.extend({
-  unreadOnly: z.coerce.boolean().default(false),
+  unreadOnly: booleanQuery(),
+  type: notificationTypeSchema.optional(),
 });
 
 function toResponse(row) {
@@ -57,6 +61,7 @@ export default async function notificationRoutes(app) {
         where: {
           userId: request.user.sub,
           ...(request.query.unreadOnly ? { readAt: null } : {}),
+          ...(request.query.type ? { type: request.query.type } : {}),
         },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         ...toPrismaPage(request.query),
@@ -82,11 +87,25 @@ export default async function notificationRoutes(app) {
     async (request, reply) => {
       // Owner-scoped in the WHERE clause — marking someone else's notification
       // read is not a data leak, but it is still not yours to touch.
+      //
+      // `readAt: null` stays in the filter so a repeat call does not rewrite
+      // the original read time.
       const { count } = await app.prisma.notification.updateMany({
         where: { id: request.params.id, userId: request.user.sub, readAt: null },
         data: { readAt: new Date() },
       });
-      if (count === 0) throw notFoundOrForbidden('Notification');
+
+      if (count === 0) {
+        // Nothing updated: either it was already read, or it is not theirs.
+        // Only the second case is a 404 — re-marking a read notification
+        // should be a no-op, not an error, since the client's intent is
+        // already satisfied.
+        const owned = await app.prisma.notification.count({
+          where: { id: request.params.id, userId: request.user.sub },
+        });
+        if (owned === 0) throw notFoundOrForbidden('Notification');
+      }
+
       reply.code(204);
       return null;
     },

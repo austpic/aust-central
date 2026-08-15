@@ -1,8 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { ToastProvider } from './components/Toast';
+import { AuthProvider } from './viewmodels/AuthContext';
 import { CgpaProvider } from './viewmodels/CgpaContext';
 import { BloodBankProvider } from './viewmodels/BloodBankContext';
 import AppLayout from './components/AppLayout';
+import RequireAuth from './components/RequireAuth';
 
 import SplashView from './views/SplashView';
 import WelcomeView from './views/WelcomeView';
@@ -37,6 +39,7 @@ import ProfileView from './views/ProfileView';
 function App() {
   return (
     <BrowserRouter>
+      <AuthProvider>
       <ToastProvider>
         <Routes>
           {/* Public landing page — first thing anyone sees, no login required */}
@@ -48,7 +51,10 @@ function App() {
           <Route path="/login" element={<LoginView />} />
           <Route path="/register" element={<RegisterView />} />
 
-          {/* Dashboard (AppLayout shell — top nav, protected app routes) */}
+          {/* Dashboard (AppLayout shell — top nav, protected app routes).
+              RequireAuth bounces to /login when there is no restored session,
+              mirroring the Flutter splash screen's auth gate. */}
+          <Route element={<RequireAuth />}>
           <Route element={<AppLayout />}>
             <Route path="/home" element={<HomeView />} />
             <Route path="/todo" element={<TodoListView />} />
@@ -95,10 +101,12 @@ function App() {
               <Route path="/blood-bank/request" element={<BloodRequestFormView />} />
             </Route>
           </Route>
+          </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ToastProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

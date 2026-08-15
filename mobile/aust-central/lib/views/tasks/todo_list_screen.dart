@@ -378,6 +378,7 @@ class _TaskTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   GestureDetector(
+                    key: ValueKey('task-toggle-${task.id}'),
                     onTap: onToggle,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
@@ -605,7 +606,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFFEBEBEB), // Bottom sheet background updated to 0xFFEBEBEB
+          color: AppColors.sheetBackground, // Bottom sheet background updated to 0xFFEBEBEB
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(28),
             topRight: Radius.circular(28),
@@ -648,11 +649,11 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
                   fillColor: CgpaColors.white,
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFF6B8578), width: 1.5), // Card outline set to 0xFF6B8578
+                    borderSide: const BorderSide(color: AppColors.subtitleGrey, width: 1.5), // Card outline set to 0xFF6B8578
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFF6B8578), width: 2.0), // Focused outline set to 0xFF6B8578
+                    borderSide: const BorderSide(color: AppColors.subtitleGrey, width: 2.0), // Focused outline set to 0xFF6B8578
                   ),
                 ),
                 onChanged: (_) {
@@ -670,11 +671,11 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
                   fillColor: CgpaColors.white,
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFF6B8578), width: 1.5), // Card outline set to 0xFF6B8578
+                    borderSide: const BorderSide(color: AppColors.subtitleGrey, width: 1.5), // Card outline set to 0xFF6B8578
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFF6B8578), width: 2.0), // Focused outline set to 0xFF6B8578
+                    borderSide: const BorderSide(color: AppColors.subtitleGrey, width: 2.0), // Focused outline set to 0xFF6B8578
                   ),
                 ),
               ),
@@ -701,7 +702,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
                   decoration: BoxDecoration(
                     color: CgpaColors.white,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFF6B8578), width: 1.5), // Card outline set to 0xFF6B8578
+                    border: Border.all(color: AppColors.subtitleGrey, width: 1.5), // Card outline set to 0xFF6B8578
                   ),
                   child: Row(
                     children: [
@@ -771,7 +772,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
         decoration: BoxDecoration(
           color: selected ? CgpaColors.primary : CgpaColors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFF6B8578), width: 1.5), // Category button outline set to 0xFF6B8578
+          border: Border.all(color: AppColors.subtitleGrey, width: 1.5), // Category button outline set to 0xFF6B8578
         ),
         alignment: Alignment.center,
         child: Text(

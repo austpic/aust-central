@@ -1,7 +1,6 @@
 import { Bell, ChevronDown, CalendarCheck } from 'lucide-react';
 import type { ClassReminder } from '../models/classReminder';
-import { assessmentLabel } from '../models/classReminder';
-import { MINUTE_OPTIONS } from '../data/classReminders';
+import { assessmentLabel, MINUTE_OPTIONS } from '../models/classReminder';
 
 // Mirrors _ReminderCard in lib/screens/class_reminder_screen.dart
 export default function ReminderCard({
@@ -32,12 +31,12 @@ export default function ReminderCard({
         <div
           className="glass-tint flex h-[42px] w-[42px] items-center justify-center rounded-[12px]"
           style={{
-            backgroundColor: active ? 'rgba(110,242,165,0.16)' : 'rgba(16,36,26,0.06)',
+            backgroundColor: active ? 'rgba(194,222,208,0.45)' : 'rgba(16,36,26,0.06)',
           }}
         >
           <Bell
             size={22}
-            style={{ color: active ? '#0d7a3d' : 'rgba(22,36,29,0.4)' }}
+            style={{ color: active ? '#1b4332' : 'rgba(27,67,50,0.4)' }}
           />
         </div>
         <div className="ml-4 min-w-0 flex-1">

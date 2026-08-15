@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:aust_track/data/repositories/community_repository.dart';
 import 'package:aust_track/viewmodels/book_exchange_view_model.dart';
 import 'package:aust_track/theme/app_colors.dart';
+import 'package:aust_track/views/widgets/avatars.dart';
 import 'package:aust_track/views/widgets/async_views.dart';
 // Same-directory imports (removing '../')
 import 'package:aust_track/views/book_exchange/book_notification_page.dart';
@@ -35,7 +36,6 @@ class _BookExchangeView extends StatefulWidget {
 }
 
 class _BookExchangeScreenState extends State<_BookExchangeView> {
-  String? _profileImagePath = 'assets/icons/profile_picture.png';
 
 
   Future<void> copyListingLink(Map<String, String> book) async {
@@ -186,27 +186,16 @@ class _BookExchangeScreenState extends State<_BookExchangeView> {
   /// Shows the user's profile picture if one is set at [_profileImagePath].
   /// If it's null, or the asset fails to load (e.g. no file placed yet),
   /// it automatically falls back to a plain profile icon.
+  /// Top-bar avatar.
+  ///
+  /// No profile image asset ships with the app, and the path this used to
+  /// reference did not exist on disk. Renders a plain icon until avatars are
+  /// wired to uploaded FileObject ids.
   Widget _buildProfileAvatar() {
-    return CircleAvatar(
+    return const CircleAvatar(
       radius: 20,
       backgroundColor: AppColors.mintChip,
-      backgroundImage:
-      _profileImagePath != null ? AssetImage(_profileImagePath!) : null,
-      onBackgroundImageError: _profileImagePath != null
-          ? (_, __) {
-        // Asset missing/failed to load — fall back to the icon.
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) setState(() => _profileImagePath = null);
-        });
-      }
-          : null,
-      child: _profileImagePath == null
-          ? const Icon(
-        Icons.person_rounded,
-        color: AppColors.darkGreen,
-        size: 22,
-      )
-          : null,
+      child: Icon(Icons.person_rounded, color: AppColors.darkGreen, size: 22),
     );
   }
 
@@ -465,18 +454,9 @@ class _BookExchangeScreenState extends State<_BookExchangeView> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Container(
+                  child: const BookCoverPlaceholder(
                     width: 64,
                     height: 84,
-                    color: AppColors.mintChip,
-                    child: Image.asset(
-                      book['image']!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Icon(
-                        Icons.menu_book_rounded,
-                        color: AppColors.darkGreen.withValues(alpha: 0.5),
-                      ),
-                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -534,11 +514,7 @@ class _BookExchangeScreenState extends State<_BookExchangeView> {
               children: [
                 GestureDetector(
                   onTap: () => _openSellerProfile(context, book),
-                  child: const CircleAvatar(
-                    radius: 16,
-                    backgroundColor: AppColors.mintChip,
-                    backgroundImage: AssetImage('assets/images/seller_placeholder.png'),
-                  ),
+                  child: InitialsAvatar(name: book['seller'] ?? '', radius: 16),
                 ),
                 const SizedBox(width: 10),
                 Expanded(

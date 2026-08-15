@@ -3,19 +3,34 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
-import 'package:aust_track/data/api/api_exception.dart';
 import 'package:aust_track/data/repositories/community_repository.dart';
 import 'package:aust_track/data/repositories/platform_repository.dart';
+import 'package:aust_track/viewmodels/book_post_view_model.dart';
 import 'package:aust_track/theme/app_colors.dart';
 
-class BookPostPage extends StatefulWidget {
+class BookPostPage extends StatelessWidget {
   const BookPostPage({super.key});
 
   @override
-  State<BookPostPage> createState() => _BookPostPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => BookPostViewModel(
+        context.read<CommunityRepository>(),
+        context.read<PlatformRepository>(),
+      ),
+      child: const _BookPostForm(),
+    );
+  }
 }
 
-class _BookPostPageState extends State<BookPostPage> {
+class _BookPostForm extends StatefulWidget {
+  const _BookPostForm();
+
+  @override
+  State<_BookPostForm> createState() => _BookPostPageState();
+}
+
+class _BookPostPageState extends State<_BookPostForm> {
   // Empty, not pre-filled with sample copy — the placeholder text used to be
   // real content a distracted user could publish verbatim.
   final _titleController = TextEditingController();
@@ -27,10 +42,7 @@ class _BookPostPageState extends State<BookPostPage> {
 
   static const Set<String> _knownCourseCodes = {'BIO 150', 'CHEM 201', 'CSE 101'};
 
-  int _conditionIndex = 1; // New, Like New, Good, Fair
-  int _priceTypeIndex = 2; // Fixed Price, Free, Swap
   bool _contactViaChat = true;
-  bool _submitting = false;
 
   // Image Upload State
   File? _coverImage;
@@ -40,11 +52,6 @@ class _BookPostPageState extends State<BookPostPage> {
   bool get _courseMatched =>
       _knownCourseCodes.contains(_courseController.text.trim().toUpperCase());
 
-  /// Index order must match the segmented control's option list.
-  static const _conditions = ['NEW', 'LIKE_NEW', 'GOOD', 'FAIR'];
-  static const _listingTypes = ['SALE', 'FREE', 'SWAP'];
-
-  bool get _isSale => _listingTypes[_priceTypeIndex] == 'SALE';
 
   @override
   void dispose() {
@@ -69,45 +76,32 @@ class _BookPostPageState extends State<BookPostPage> {
   /// attachments exist — the reverse order can leave a listing referencing
   /// files that never arrived.
   Future<void> _post() async {
+    final viewModel = context.read<BookPostViewModel>();
+    final navigator = Navigator.of(context);
+
     if (_titleController.text.trim().isEmpty) return _toast('Add a book title.');
     if (_courseController.text.trim().isEmpty) return _toast('Add a course code.');
     if (_departmentController.text.trim().isEmpty) return _toast('Add a department.');
     if (_semesterController.text.trim().isEmpty) return _toast('Add a semester.');
-    if (_isSale && int.tryParse(_priceController.text.trim()) == null) {
+    if (viewModel.isSale && int.tryParse(_priceController.text.trim()) == null) {
       return _toast('Enter a price in taka for a fixed-price listing.');
     }
 
-    setState(() => _submitting = true);
+    final failure = await viewModel.submit(
+      title: _titleController.text.trim(),
+      courseCode: _courseController.text.trim(),
+      department: _departmentController.text.trim(),
+      semester: _semesterController.text.trim(),
+      description: _descriptionController.text.trim(),
+      priceBdt: int.tryParse(_priceController.text.trim()),
+      images: [if (_coverImage != null) _coverImage!, ..._additionalImages],
+    );
 
-    try {
-      final platform = context.read<PlatformRepository>();
-      final files = [if (_coverImage != null) _coverImage!, ..._additionalImages];
-
-      final imageIds = <String>[];
-      for (final file in files) {
-        imageIds.add(await platform.uploadImage(file.path));
-      }
-
-      if (!mounted) return;
-      await context.read<CommunityRepository>().createListing(
-        title: _titleController.text.trim(),
-        courseCode: _courseController.text.trim(),
-        department: _departmentController.text.trim(),
-        semester: _semesterController.text.trim(),
-        condition: _conditions[_conditionIndex],
-        listingType: _listingTypes[_priceTypeIndex],
-        priceBdt: _isSale ? int.parse(_priceController.text.trim()) : null,
-        description: _descriptionController.text.trim(),
-        imageIds: imageIds,
-      );
-
-      if (!mounted) return;
-      // `true` tells the browse screen to reload so the new listing appears.
-      Navigator.of(context).pop(true);
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _submitting = false);
-      _toast(e.fieldErrors.values.firstOrNull?.first ?? e.message);
+    //  tells the browse screen to reload so the listing appears.
+    if (failure == null) {
+      navigator.pop(true);
+    } else {
+      _toast(failure);
     }
   }
 
@@ -179,6 +173,8 @@ class _BookPostPageState extends State<BookPostPage> {
 
   @override
   Widget build(BuildContext context) {
+    final viewModel = context.watch<BookPostViewModel>();
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       body: SafeArea(
@@ -203,8 +199,8 @@ class _BookPostPageState extends State<BookPostPage> {
                   const SizedBox(height: 10),
                   _segmentedControl(
                     options: const ['New', 'Like New', 'Good', 'Fair'],
-                    selectedIndex: _conditionIndex,
-                    onChanged: (i) => setState(() => _conditionIndex = i),
+                    selectedIndex: viewModel.conditionIndex,
+                    onChanged: viewModel.setCondition,
                   ),
                   const SizedBox(height: 20),
 
@@ -228,14 +224,14 @@ class _BookPostPageState extends State<BookPostPage> {
                   const SizedBox(height: 10),
                   _segmentedControl(
                     options: const ['Fixed Price', 'Free', 'Swap'],
-                    selectedIndex: _priceTypeIndex,
-                    onChanged: (i) => setState(() => _priceTypeIndex = i),
+                    selectedIndex: viewModel.typeIndex,
+                    onChanged: viewModel.setType,
                   ),
 
                   // Only shown for a fixed price. The API refuses a price on
                   // SWAP/FREE listings, and a stale value left in a hidden
                   // field would be rejected on submit.
-                  if (_isSale) ...[
+                  if (viewModel.isSale) ...[
                     const SizedBox(height: 12),
                     _plainField(
                       controller: _priceController,
@@ -257,7 +253,7 @@ class _BookPostPageState extends State<BookPostPage> {
                 ],
               ),
             ),
-            _buildBottomBar(),
+            _buildBottomBar(viewModel),
           ],
         ),
       ),
@@ -549,7 +545,7 @@ class _BookPostPageState extends State<BookPostPage> {
   // Bottom action bar
   // ---------------------------------------------------------------------
 
-  Widget _buildBottomBar() {
+  Widget _buildBottomBar(BookPostViewModel viewModel) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
       decoration: const BoxDecoration(
@@ -577,7 +573,7 @@ class _BookPostPageState extends State<BookPostPage> {
             const SizedBox(width: 12),
             Expanded(
               child: ElevatedButton(
-                onPressed: _submitting ? null : _post,
+                onPressed: viewModel.isSubmitting ? null : _post,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.darkGreen,
                   foregroundColor: Colors.white,
@@ -585,7 +581,7 @@ class _BookPostPageState extends State<BookPostPage> {
                   minimumSize: const Size.fromHeight(50),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
                 ),
-                child: _submitting
+                child: viewModel.isSubmitting
                     ? const SizedBox(
                         width: 20,
                         height: 20,

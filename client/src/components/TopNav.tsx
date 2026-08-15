@@ -23,7 +23,7 @@ import {
 import appLogo from '../assets/app-logo.png';
 import { useProfileViewModel } from '../viewmodels/useProfileViewModel';
 import { useToast } from './Toast';
-import { setLoggedIn } from '../utils/auth';
+import { useAuth } from '../viewmodels/AuthContext';
 
 // Replaces the old left Sidebar: a single top bar used at every screen size.
 // Primary sections sit as direct links; the less-primary tools group under an
@@ -53,6 +53,7 @@ export default function TopNav() {
   const toast = useToast();
   const { pathname } = useLocation();
   const { user, initial } = useProfileViewModel();
+  const { signOut: endSession } = useAuth();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [exploreOpen, setExploreOpen] = useState(false);
@@ -73,10 +74,10 @@ export default function TopNav() {
     navigate(to);
   }
 
-  function signOut() {
+  async function signOut() {
     closeAll();
-    setLoggedIn(false);
-    navigate('/login');
+    await endSession();
+    navigate('/login', { replace: true });
   }
 
   return (

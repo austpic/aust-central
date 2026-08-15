@@ -40,6 +40,22 @@ class AppColors {
 
   // Avatar / icon swatch on request cards (matches BloodBank dashboard icon tone).
   static const Color bloodRedSoft = Color(0xFFE9A8A8);
+
+  // --- Folded in from literals that were scattered across views/ ------------
+  // Values unchanged; only their definition moved here.
+
+  /// Notice-board gradient. A third green, distinct from [darkGreen] and
+  /// CgpaColors.primary — kept because it is the notice card's identity.
+  static const Color noticeGradientStart = Color(0xFF2C8E6C);
+  static const Color noticeGradientEnd = Color(0xFF339974);
+
+  /// Soft washes behind urgency badges. Paired with [warning] / [danger]
+  /// borders, so they are intentionally much lighter than those tokens.
+  static const Color warningWash = Color(0xFFFCE7CF);
+  static const Color dangerWash = Color(0xFFF6D6D2);
+
+  /// Neutral sheet background used by modal forms.
+  static const Color sheetBackground = Color(0xFFEBEBEB);
 }
 
 /// The lighter-green palette used by the academic screens.

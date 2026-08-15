@@ -388,3 +388,85 @@ describe('response shape', () => {
     expect(response.json().cgpa).toBeNull();
   });
 });
+
+describe('query-string booleans', () => {
+  /**
+   * Regression: `z.coerce.boolean()` runs JS `Boolean(value)`, and every
+   * non-empty string is truthy — so `?mine=false` parsed as **true** and
+   * silently inverted the filter. The blood bank's community feed showed
+   * nothing but the viewer's own requests as a result.
+   */
+  it('treats mine=false as false, not true', async () => {
+    const alice = await createUser(app);
+    const bob = await createUser(app);
+
+    const payload = {
+      patientName: 'Community Patient',
+      bloodGroup: 'A+',
+      hospital: 'Square',
+      units: 1,
+      urgency: 'ROUTINE',
+      requiredBy: new Date(Date.now() + 86_400_000).toISOString(),
+      contactNumber: '+8801711122334',
+    };
+    await api('/blood/requests', { method: 'POST', headers: alice.headers, payload });
+
+    // Bob asks for the community feed explicitly opting out of "mine".
+    const feed = await api('/blood/requests?mine=false', { headers: bob.headers });
+    expect(feed.statusCode).toBe(200);
+    expect(feed.json().items).toHaveLength(1);
+    expect(feed.json().items[0].isMine).toBe(false);
+
+    // And mine=true really does scope to the caller.
+    const bobOwn = await api('/blood/requests?mine=true', { headers: bob.headers });
+    expect(bobOwn.json().items).toHaveLength(0);
+  });
+
+  it('treats unreadOnly=false as false', async () => {
+    const user = await createUser(app);
+    const response = await api('/notifications?unreadOnly=false', { headers: user.headers });
+    expect(response.statusCode).toBe(200);
+  });
+
+  it('rejects a non-boolean string rather than coercing it', async () => {
+    const user = await createUser(app);
+    const response = await api('/blood/requests?mine=banana', { headers: user.headers });
+    expect(response.statusCode).toBe(422);
+  });
+});
+
+describe('notification read idempotency', () => {
+  it('re-marking an already-read notification is a no-op, not a 404', async () => {
+    const user = await createUser(app);
+    const created = await app.prisma.notification.create({
+      data: { userId: user.id, type: 'SYSTEM', title: 'Probe', body: '' },
+    });
+
+    const first = await api(`/notifications/${created.id}/read`, {
+      method: 'POST', headers: user.headers,
+    });
+    expect(first.statusCode).toBe(204);
+
+    const second = await api(`/notifications/${created.id}/read`, {
+      method: 'POST', headers: user.headers,
+    });
+    expect(second.statusCode).toBe(204);
+
+    // The original read time must survive the repeat call.
+    const row = await app.prisma.notification.findUnique({ where: { id: created.id } });
+    expect(row.readAt).not.toBeNull();
+  });
+
+  it("still 404s on another user's notification", async () => {
+    const owner = await createUser(app);
+    const stranger = await createUser(app);
+    const created = await app.prisma.notification.create({
+      data: { userId: owner.id, type: 'SYSTEM', title: 'Private', body: '' },
+    });
+
+    const response = await api(`/notifications/${created.id}/read`, {
+      method: 'POST', headers: stranger.headers,
+    });
+    expect(response.statusCode).toBe(404);
+  });
+});

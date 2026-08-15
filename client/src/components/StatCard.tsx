@@ -6,7 +6,7 @@ export default function StatCard({
   label,
   value,
   icon: Icon,
-  accentColor = '#0D7A3D',
+  accentColor = '#407362',
 }: {
   label: string;
   value: string;

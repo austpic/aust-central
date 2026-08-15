@@ -1,6 +1,7 @@
 import { ArrowLeft, Search } from 'lucide-react';
 import ItemCard from '../components/ItemCard';
 import { useLostFoundViewModel } from '../viewmodels/useLostFoundViewModel';
+import { LoadingState, ErrorState } from '../components/AsyncState';
 
 // Mirrors LostFoundScreen in lib/screens/lost_found_screen.dart.
 export default function LostFoundView() {
@@ -53,7 +54,11 @@ export default function LostFoundView() {
 
       {/* Items */}
       <div className="mt-4">
-        {vm.filtered.length === 0 ? (
+        {vm.loading ? (
+          <LoadingState />
+        ) : vm.error ? (
+          <ErrorState message={vm.error} onRetry={vm.reload} />
+        ) : vm.filtered.length === 0 ? (
           <div className="py-12 text-center">
             <div className="glass-tint mx-auto flex h-16 w-16 items-center justify-center rounded-[20px] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
               <Search size={28} className="text-mint-ink" />
@@ -68,7 +73,7 @@ export default function LostFoundView() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {vm.filtered.map((item) => (
-              <ItemCard key={`${item.name}-${item.date}`} item={item} />
+              <ItemCard key={item.id} item={item} />
             ))}
           </div>
         )}

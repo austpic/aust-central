@@ -217,7 +217,7 @@ class NoticeBoardCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
             gradient: const LinearGradient(
-              colors: [Color(0xFF2C8E6C), Color(0xFF339974)], // 45-degree gradient
+              colors: [AppColors.noticeGradientStart, AppColors.noticeGradientEnd], // 45-degree gradient
               begin: Alignment.bottomLeft,
               end: Alignment.topRight,
             ),

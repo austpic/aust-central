@@ -1,82 +1,89 @@
 @import "tailwindcss";
 
 /*
- * Design tokens ported from campus_app_redesign_v7.html (the v7 visual bar)
- * and layered over the Flutter-derived tokens they map to. Legacy token names
- * are preserved so every view/component compiles unchanged while the values
- * now follow the reference palette:
- *   ink/ice  #16241D   mint #6EF2A5   mint-deep #2BC97A   mint-ink #0D7A3D
- *   gold #F2C25B        gold-ink #B45309   sky #57C7EC    sky-ink #0369A1
- *   violet #B98BF2      violet-ink #7C3AED  coral #FF6E56  coral-ink #C1442D
+ * Design tokens aligned to the Flutter app's real theme
+ * (mobile/aust-central/lib/theme/app_colors.dart). Token NAMES are unchanged
+ * from the earlier v7 pass — every component below still compiles — but the
+ * VALUES now come from the app, not the v7 mockup. Values are annotated with
+ * their Dart source so the two stay in sync by inspection.
+ *
+ * The app itself carries two brand greens (AppColors' #1B4332 and CgpaColors'
+ * #407362, a divergence noted in the Flutter theme file and not yet unified).
+ * This file reproduces that split rather than papering over it, so the two
+ * clients stay honestly identical.
  */
 @theme {
-  /* ---- Three-font stack (reference) ---- */
+  /* ---- Three-font stack ---- */
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
 
-  /* ---- Reference palette (v7) ---- */
-  --color-mint: #6ef2a5;
-  --color-mint-deep: #2bc97a;
-  --color-mint-ink: #0d7a3d;
+  /* ---- Primary accent, realigned from v7 mint to AppColors.darkGreen ---- */
+  --color-mint: #c2ded0; /* AppColors.mintChip — was the v7 bright mint */
+  --color-mint-deep: #2f8f6a; /* AppColors.success, used as the mid gradient stop */
+  --color-mint-ink: #1b4332; /* AppColors.darkGreen — the app's real brand ink */
+  /* Secondary category hues (exam/general notice tags). No AppColors
+     equivalent exists — Flutter renders every notice category with the same
+     mint chip — so these stay as distinct accents for on-screen variety
+     rather than inventing values the app does not have. */
   --color-gold: #f2c25b;
-  --color-gold-ink: #b45309;
+  --color-gold-ink: #d89030; /* AppColors.warning */
   --color-sky: #57c7ec;
   --color-sky-ink: #0369a1;
   --color-violet: #b98bf2;
   --color-violet-ink: #7c3aed;
   --color-coral: #ff6e56;
-  --color-coral-ink: #c1442d;
-  --color-ice: #16241d;
-  --color-dim: rgba(22, 36, 29, 0.62);
-  --color-dim2: rgba(22, 36, 29, 0.4);
+  --color-coral-ink: #b5392b; /* AppColors.danger */
+  --color-ice: #1b4332;
+  --color-dim: rgba(27, 67, 50, 0.62);
+  --color-dim2: rgba(27, 67, 50, 0.4);
 
-  /* ---- AppColors (lib/theme/app_colors.dart) remapped to reference ---- */
-  --color-scaffold: #eef4f0;
-  --color-darkgreen: #16241d;
-  --color-textdark: #16241d;
-  --color-mintchip: #6ef2a5;
+  /* ---- AppColors (lib/theme/app_colors.dart) ---- */
+  --color-scaffold: #e9edea;
+  --color-darkgreen: #1b4332;
+  --color-textdark: #1b4332;
+  --color-mintchip: #c2ded0;
   --color-mintsection: #c9e1d5;
   --color-white: #ffffff;
-  --color-subtlegrey: rgba(22, 36, 29, 0.62);
-  --color-success: #0d7a3d;
-  --color-warning: #b45309;
-  --color-danger: #c1442d;
+  --color-subtlegrey: #6b8578;
+  --color-success: #2f8f6a;
+  --color-warning: #d89030;
+  --color-danger: #b5392b;
   --color-bloodsoft: #e9a8a8;
 
-  /* ---- CgpaColors (lib/constants/app_colors.dart) remapped ---- */
-  --color-primary: #0d7a3d;
-  --color-secondary: #2bc97a;
-  --color-lightaccent: #6ef2a5;
-  --color-cgpabackground: #eef4f0;
+  /* ---- CgpaColors (lib/theme/app_colors.dart) — the app's second green ---- */
+  --color-primary: #407362;
+  --color-secondary: #579d83;
+  --color-lightaccent: #beedcc;
+  --color-cgpabackground: #f1f2f2;
   --color-border: #b5b5b5;
-  --color-cgpadark: #16241d;
-  --color-cgpamedium: rgba(22, 36, 29, 0.4);
-  --color-cgpalight: rgba(22, 36, 29, 0.62);
-  --color-cgpasuccess: #0d7a3d;
-  --color-cgpawarning: #b45309;
+  --color-cgpadark: #1b1b1b;
+  --color-cgpamedium: #4a4a4a;
+  --color-cgpalight: #7a7a7a;
+  --color-cgpasuccess: #2e7d5b;
+  --color-cgpawarning: #e8a838;
   --color-cgpaerror: #d64545;
 
-  /* ---- Notice / Dashboard gradient (custom_cards.dart) ---- */
-  --color-noticestart: #2bc97a;
-  --color-noticeend: #0d7a3d;
+  /* ---- Notice board gradient (AppColors.noticeGradientStart/End) ---- */
+  --color-noticestart: #2c8e6c;
+  --color-noticeend: #339974;
 
-  /* ---- Lab Report + To-do local palette remapped ---- */
-  --color-labprimary: #0d7a3d;
-  --color-labsecondary: #6ef2a5;
+  /* ---- Lab Report + To-do palette (folded into CgpaColors in the app) ---- */
+  --color-labprimary: #407362;
+  --color-labsecondary: #beedcc;
   --color-labgradlight: #8cd4b8;
-  --color-labtext: #16241d;
-  --color-labbackground: #eef4f0;
-  --color-labgrey: rgba(22, 36, 29, 0.62);
+  --color-labtext: #2c3e35;
+  --color-labbackground: #f4f7f6;
+  --color-labgrey: #616161;
 
-  /* ---- Misc neutrals (green-tinted dims like the reference) ---- */
-  --color-ink: #16241d;
-  --color-black54: rgba(22, 36, 29, 0.54);
-  --color-black38: rgba(22, 36, 29, 0.38);
-  --color-amberwash: #fce7cf;
-  --color-redwash: #f6d6d2;
+  /* ---- Misc neutrals ---- */
+  --color-ink: #1b4332;
+  --color-black54: rgba(27, 67, 50, 0.54);
+  --color-black38: rgba(27, 67, 50, 0.38);
+  --color-amberwash: #fce7cf; /* AppColors.warningWash */
+  --color-redwash: #f6d6d2; /* AppColors.dangerWash */
   --color-chipborder: #f1f1f1;
-  --color-sheetgrey: #ebebeb;
+  --color-sheetgrey: #ebebeb; /* AppColors.sheetBackground */
 
   /* ---- Glass system (exact reference recipe) ---- */
   --color-glass-border: rgba(16, 36, 26, 0.09);
@@ -103,7 +110,7 @@ body {
   margin: 0;
   position: relative;
   min-height: 100svh;
-  background-color: #eef4f0;
+  background-color: #e9edea; /* AppColors.scaffoldBackground */
   color: var(--color-textdark);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -117,7 +124,7 @@ body::before {
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(circle at 15% 0%, rgba(46, 201, 122, 0.16) 0%, transparent 45%),
+    radial-gradient(circle at 15% 0%, rgba(47, 143, 106, 0.16) 0%, transparent 45%),
     radial-gradient(circle at 90% 100%, rgba(87, 199, 236, 0.14) 0%, transparent 45%);
 }
 
@@ -154,18 +161,18 @@ h3 {
 
   /* Tinted glass swatch — icon wells, chips (mint default, v7 .hubicon/.fnum). */
   .glass-tint {
-    background-color: rgba(110, 242, 165, 0.12);
+    background-color: rgba(194, 222, 208, 0.35);
     border: 1px solid rgba(16, 36, 26, 0.09);
   }
 
   /* Accent glass — brand gradient (mint-deep → mint-ink), white text. */
   .glass-accent {
     position: relative;
-    background: linear-gradient(150deg, #2bc97a 0%, #0d7a3d 100%);
+    background: linear-gradient(150deg, #2f8f6a 0%, #1b4332 100%);
     border: 1px solid rgba(255, 255, 255, 0.22);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.22),
-      0 10px 26px -10px rgba(13, 122, 61, 0.45);
+      0 10px 26px -10px rgba(27, 67, 50, 0.45);
   }
 
   /* Specular sheen — one soft light sweep for hero cards.            */
@@ -220,7 +227,7 @@ h3 {
 
   /* Gradient-clip headline — darkest → brand green (v7 .intro h1).    */
   .text-gradient {
-    background: linear-gradient(100deg, #16241d 15%, #0d7a3d 90%);
+    background: linear-gradient(100deg, #1b4332 15%, #2f8f6a 90%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -228,8 +235,8 @@ h3 {
 
   /* Tinted category/status badges (v7 .tag — 16% tint of the ink).    */
   .tag-mint {
-    background-color: rgba(110, 242, 165, 0.16);
-    color: #0d7a3d;
+    background-color: rgba(194, 222, 208, 0.45);
+    color: #1b4332;
   }
   .tag-gold {
     background-color: rgba(242, 194, 91, 0.16);
@@ -256,7 +263,7 @@ h3 {
     height: 6px;
     border-radius: 50%;
     background: var(--color-mint);
-    box-shadow: 0 0 8px 2px rgba(110, 242, 165, 0.7);
+    box-shadow: 0 0 8px 2px rgba(47, 143, 106, 0.7);
     animation: pulse-glow 1.6s ease-in-out infinite;
   }
 
@@ -269,11 +276,11 @@ h3 {
 
   /* Active pill — mint tint + soft glow (v7 navitem.active).          */
   .glass-pill-active {
-    background-color: rgba(110, 242, 165, 0.18);
-    border: 1px solid rgba(13, 122, 61, 0.28);
+    background-color: rgba(194, 222, 208, 0.5);
+    border: 1px solid rgba(27, 67, 50, 0.28);
     border-radius: 20px;
-    color: #0d7a3d;
-    box-shadow: 0 0 14px rgba(110, 242, 165, 0.25);
+    color: #1b4332;
+    box-shadow: 0 0 14px rgba(47, 143, 106, 0.25);
   }
 
   /* Glass input well (v7 .fieldgrp input surface).                   */
@@ -284,10 +291,10 @@ h3 {
     box-shadow: inset 0 1px 2px rgba(16, 36, 26, 0.04);
   }
   .glass-input:focus-within {
-    border-color: rgba(13, 122, 61, 0.5);
+    border-color: rgba(27, 67, 50, 0.5);
     box-shadow:
       inset 0 1px 2px rgba(16, 36, 26, 0.04),
-      0 0 0 4px rgba(110, 242, 165, 0.15);
+      0 0 0 4px rgba(194, 222, 208, 0.4);
   }
 
   /* Numbered form-row index badge (v7 .fnum).                        */
@@ -295,25 +302,27 @@ h3 {
     font-family: var(--font-mono);
     font-size: 11px;
     font-weight: 700;
-    color: #0d7a3d;
-    background: rgba(110, 242, 165, 0.12);
+    color: #1b4332;
+    background: rgba(194, 222, 208, 0.35);
     border-radius: 8px;
   }
 
-  /* Floating action button — mint gradient, dark glyph (v7 .fab).    */
+  /* Floating action button — the app's green gradient, white glyph.
+     v7's fill was bright mint with a near-black glyph; against the app's
+     darker green a white glyph is what keeps contrast. */
   .fab {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(150deg, #6ef2a5, #2bc97a);
+    background: linear-gradient(150deg, #2f8f6a, #1b4332);
     border-radius: 16px;
-    color: #0a1713;
-    box-shadow: 0 10px 24px rgba(110, 242, 165, 0.35);
+    color: #ffffff;
+    box-shadow: 0 10px 24px rgba(47, 143, 106, 0.35);
     transition: transform 0.18s ease-out, box-shadow 0.18s ease-out;
   }
   .fab:hover {
     transform: translateY(-2px);
-    box-shadow: 0 14px 30px rgba(110, 242, 165, 0.45);
+    box-shadow: 0 14px 30px rgba(47, 143, 106, 0.45);
   }
 }
 
@@ -335,7 +344,7 @@ h3 {
 .ambient-blob.b1 {
   width: 220px;
   height: 220px;
-  background: radial-gradient(circle, #2bc97a, transparent 70%);
+  background: radial-gradient(circle, #2f8f6a, transparent 70%);
   opacity: 0.2;
   top: -60px;
   left: -50px;
@@ -413,7 +422,7 @@ h3 {
   }
 
   .glass-tint {
-    background-color: rgba(110, 242, 165, 0.12);
+    background-color: rgba(194, 222, 208, 0.35);
     backdrop-filter: blur(14px) saturate(150%);
     -webkit-backdrop-filter: blur(14px) saturate(150%);
   }
@@ -431,7 +440,7 @@ h3 {
   }
 
   .glass-pill-active {
-    background-color: rgba(110, 242, 165, 0.18);
+    background-color: rgba(194, 222, 208, 0.5);
     backdrop-filter: blur(12px) saturate(150%);
     -webkit-backdrop-filter: blur(12px) saturate(150%);
   }
@@ -455,9 +464,9 @@ a,
 
 /* Glass-appropriate focus ring (soft mint glow).                     */
 :where(button, a, input, select, textarea, [role="switch"], [role="button"]):focus-visible {
-  outline: 2px solid rgba(13, 122, 61, 0.6);
+  outline: 2px solid rgba(27, 67, 50, 0.6);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(110, 242, 165, 0.18);
+  box-shadow: 0 0 0 4px rgba(194, 222, 208, 0.5);
 }
 
 /* Dialog / toast entrance — fade + blur-in to sell the material.     */

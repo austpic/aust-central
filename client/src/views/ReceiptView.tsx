@@ -25,7 +25,7 @@ export default function ReceiptView() {
         <div className="glass-accent rounded-t-[22px] px-6 py-5 text-center">
           <Bus size={36} className="mx-auto text-mint-ink" />
           <div className="mt-2 font-display text-[20px] font-bold text-mint-ink">{vm.busName}</div>
-          <div className="eyebrow mt-2 text-mint-ink/80">Booking Confirmed</div>
+          <div className="eyebrow mt-2 text-mint-ink/80">Route &amp; Schedule</div>
         </div>
 
         {/* Dotted divider */}
@@ -45,7 +45,7 @@ export default function ReceiptView() {
           <div className="h-4" />
           <ReceiptRow icon={<MapPin size={20} />} label="To" value={vm.toLocation} />
           <div className="h-4" />
-          <ReceiptRow icon={<Clock size={20} />} label="Time of Arrival" value={vm.selectedTime} />
+          <ReceiptRow icon={<Clock size={20} />} label="Departure" value={vm.selectedTime} />
           <div className="h-4" />
           <ReceiptRow icon={<Phone size={20} />} label="Driver Number" value={vm.driverNumber} />
 

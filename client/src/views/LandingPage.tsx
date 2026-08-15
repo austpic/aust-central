@@ -18,14 +18,14 @@ import {
 } from 'lucide-react';
 import AmbientBackground from '../components/AmbientBackground';
 import appLogo from '../assets/app-logo.png';
-import { isLoggedIn } from '../utils/auth';
+import { useAuth } from '../viewmodels/AuthContext';
 
 // Public marketing/landing page — first thing anyone sees, no login needed.
 // Fully separate from the app shell: its own header + footer, scroll-linked
 // sections, and genuine copy derived from the Flutter app's real features
-// (lib/screens/home_page.dart + the screens it links to).
+// (lib/views/home/home_page.dart + the screens it links to).
 export default function LandingPage() {
-  const loggedIn = isLoggedIn();
+  const { isSignedIn: loggedIn } = useAuth();
 
   return (
     <div className="relative min-h-svh">

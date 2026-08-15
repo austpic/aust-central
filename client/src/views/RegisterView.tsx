@@ -38,7 +38,7 @@ export default function RegisterView() {
           icon={<Mail size={18} />}
           value={vm.email}
           onChange={(e) => vm.setEmail(e.target.value)}
-          placeholder="demo@email.com"
+          placeholder="you@aust.edu"
           type="email"
         />
         <Field

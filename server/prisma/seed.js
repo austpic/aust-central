@@ -130,7 +130,7 @@ async function main() {
 
   // --- Users ---
   const admin = await upsertUser({
-    email: 'admin@aust-central.local',
+    email: 'admin@aust.edu',
     name: 'Campus Admin',
     role: 'ADMIN',
     department: 'Administration',
@@ -138,7 +138,7 @@ async function main() {
   });
 
   const farhana = await upsertUser({
-    email: 'farhana@aust-central.local',
+    email: 'farhana@aust.edu',
     name: 'Farhana Rahman',
     role: 'STUDENT',
     department: 'CSE',
@@ -146,7 +146,7 @@ async function main() {
   });
 
   const arman = await upsertUser({
-    email: 'arman@aust-central.local',
+    email: 'arman@aust.edu',
     name: 'Shahidul Islam Arman',
     role: 'STUDENT',
     department: 'Chemistry',
@@ -382,9 +382,9 @@ async function main() {
 
   console.log('\nSeed complete.');
   console.log(`Demo accounts (password: ${DEMO_PASSWORD})`);
-  console.log('  admin@aust-central.local    (ADMIN)');
-  console.log('  farhana@aust-central.local  (STUDENT, has data)');
-  console.log('  arman@aust-central.local    (STUDENT, seller)');
+  console.log('  admin@aust.edu    (ADMIN)');
+  console.log('  farhana@aust.edu  (STUDENT, has data)');
+  console.log('  arman@aust.edu    (STUDENT, seller)');
 }
 
 main()

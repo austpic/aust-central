@@ -1,12 +1,36 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BUS_STOPS } from '../data/busData';
+import { platformRepository } from '../repositories/platform';
 
-// Mirrors _LocationCardState in lib/screens/bus_page.dart
+// Mirrors BusStopsViewModel in lib/viewmodels/transport_view_model.dart.
+// Stops are reference data owned by the server, so adding one is an
+// operations change rather than an app release.
+const FALLBACK_PLACES = [
+  'Mirpur', 'Ansar Camp', 'Technical', 'Kalyanpur', 'Shyamoli', 'Ring Road',
+  'Shia Mashjid', 'Mohammadpur', 'Asadgate', 'Manik Mia', 'Khamar Bari',
+  'Farmgate',
+];
+
 export function useBusViewModel() {
   const navigate = useNavigate();
+  const [places, setPlaces] = useState<string[]>(FALLBACK_PLACES);
   const [selectedFrom, setSelectedFrom] = useState<string | undefined>(undefined);
   const [selectedTo, setSelectedTo] = useState<string | undefined>(undefined);
+
+  const load = useCallback(async () => {
+    // Deliberately does not surface an error state: the fallback list keeps
+    // the picker usable offline, which is better than blocking the screen.
+    try {
+      const stops = await platformRepository.stops();
+      setPlaces(stops.map((s) => s.name as string));
+    } catch {
+      // keep the fallback list
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   function selectFrom(value: string) {
     setSelectedFrom(value);
@@ -21,5 +45,5 @@ export function useBusViewModel() {
     }
   }
 
-  return { places: BUS_STOPS, selectedFrom, selectedTo, selectFrom, selectTo };
+  return { places, selectedFrom, selectedTo, selectFrom, selectTo };
 }

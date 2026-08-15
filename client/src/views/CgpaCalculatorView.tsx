@@ -52,7 +52,7 @@ export default function CgpaCalculatorView() {
           size={150}
           strokeWidth={10}
           progress={currentCgpa / 4}
-          colors={['#6EF2A5', '#57C7EC', '#B98BF2']}
+          colors={['#407362', '#57C7EC', '#B98BF2']}
         >
           <span className="font-display text-[36px] font-bold leading-none text-textdark">
             {currentCgpa.toFixed(2)}
@@ -103,13 +103,13 @@ export default function CgpaCalculatorView() {
               label="Semester GPA"
               value={vm.semesterGpa.toFixed(2)}
               icon={TrendingUp}
-              accentColor="#0D7A3D"
+              accentColor="#407362"
             />
             <StatCard
               label="Cumulative CGPA"
               value={vm.cumulativeCgpa.toFixed(2)}
               icon={BarChart3}
-              accentColor="#2BC97A"
+              accentColor="#579d83"
             />
           </div>
           <div className="mt-4 grid grid-cols-2 gap-4">
@@ -117,7 +117,7 @@ export default function CgpaCalculatorView() {
               label="Total Credits"
               value={vm.totalCurrentCredits.toFixed(1)}
               icon={BookOpen}
-              accentColor="#B45309"
+              accentColor="#e8a838"
             />
             <StatCard
               label="Courses"
