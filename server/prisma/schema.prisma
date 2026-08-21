@@ -122,10 +122,14 @@ model PasswordResetToken {
   userId String @db.Uuid
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  tokenHash String    @unique
+  // SHA-256 (keyed with PASSWORD_PEPPER) of a 6-digit code, so a database dump
+  // cannot be replayed. Not unique: two users legitimately receive the same
+  // code, and attempts are counted per row to lock out brute-forcing.
+  tokenHash String
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime  @default(now())
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@map("password_reset_tokens")
@@ -136,10 +140,11 @@ model EmailVerificationToken {
   userId String @db.Uuid
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  tokenHash String    @unique
+  tokenHash String
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime  @default(now())
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@map("email_verification_tokens")

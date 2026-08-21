@@ -30,7 +30,7 @@ export function useRegisterViewModel() {
     setIsLoading(true);
     try {
       await register({ name: name.trim(), email: email.trim(), password });
-      navigate('/home', { replace: true });
+      navigate('/verify-email', { replace: true, state: { email: email.trim() } });
     } catch (error) {
       const fieldError = error instanceof ApiError ? error.errorFor('password') : undefined;
       setMessage(fieldError ?? authErrorMessage(error));

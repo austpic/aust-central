@@ -71,33 +71,31 @@ export async function sendMail({ to, subject, text, logger }) {
   }
 }
 
-/** @param {string} token */
-export function passwordResetEmail(token) {
-  const link = `${env.PUBLIC_URL}/reset-password?token=${encodeURIComponent(token)}`;
+/** @param {string} otp */
+export function passwordResetEmail(otp) {
   return {
-    subject: 'Reset your AUST Central password',
+    subject: 'Your AUST Central password reset code',
     text: [
       'We received a request to reset your AUST Central password.',
       '',
-      `Reset link: ${link}`,
+      `Your reset code is: ${otp}`,
       '',
-      'This link can be used once and expires in 30 minutes.',
+      'Enter this code on the password reset screen. It can be used once and expires in 15 minutes.',
       "If you didn't request this, you can ignore this email — your password will not change.",
     ].join('\n'),
   };
 }
 
-/** @param {string} token */
-export function verificationEmail(token) {
-  const link = `${env.PUBLIC_URL}/verify-email?token=${encodeURIComponent(token)}`;
+/** @param {string} otp */
+export function verificationEmail(otp) {
   return {
-    subject: 'Verify your AUST Central email',
+    subject: 'Your AUST Central verification code',
     text: [
       'Welcome to AUST Central.',
       '',
-      `Confirm your address: ${link}`,
+      `Your verification code is: ${otp}`,
       '',
-      'This link expires in 24 hours.',
+      'Enter this code on the verification screen. It can be used once and expires in 15 minutes.',
     ].join('\n'),
   };
 }

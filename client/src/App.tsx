@@ -10,6 +10,9 @@ import SplashView from './views/SplashView';
 import WelcomeView from './views/WelcomeView';
 import LoginView from './views/LoginView';
 import RegisterView from './views/RegisterView';
+import ForgotPasswordView from './views/ForgotPasswordView';
+import VerifyEmailView from './views/VerifyEmailView';
+import ResetPasswordView from './views/ResetPasswordView';
 import LandingPage from './views/LandingPage';
 import HomeView from './views/HomeView';
 import TodoListView from './views/TodoListView';
@@ -50,6 +53,9 @@ function App() {
           <Route path="/welcome" element={<WelcomeView />} />
           <Route path="/login" element={<LoginView />} />
           <Route path="/register" element={<RegisterView />} />
+          <Route path="/forgot-password" element={<ForgotPasswordView />} />
+          <Route path="/verify-email" element={<VerifyEmailView />} />
+          <Route path="/reset-password" element={<ResetPasswordView />} />
 
           {/* Dashboard (AppLayout shell — top nav, protected app routes).
               RequireAuth bounces to /login when there is no restored session,
