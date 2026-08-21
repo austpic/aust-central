@@ -1,6 +1,8 @@
 import {
   createHash,
+  createHmac,
   randomBytes,
+  randomInt,
   randomUUID,
   timingSafeEqual,
 } from 'node:crypto';
@@ -99,6 +101,30 @@ export async function fakeVerifyDelay() {
 export function generateOpaqueToken() {
   const token = randomBytes(32).toString('base64url');
   return { token, hash: hashToken(token) };
+}
+
+/**
+ * A 6-digit numeric one-time code plus its storage hash.
+ *
+ * Unlike the opaque tokens above, a 6-digit code has only ~10^6 possible
+ * values, so a bare SHA-256 would let someone with a table dump brute-force
+ * the whole keyspace offline. It is therefore hashed with HMAC-SHA256 keyed by
+ * `PASSWORD_PEPPER` — the same secret that already protects password hashes —
+ * so verification of a dumped database still requires the pepper.
+ *
+ * @returns {{ code: string, hash: string }}
+ */
+export function generateOtp() {
+  const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+  return { code, hash: hashOtp(code) };
+}
+
+/**
+ * @param {string} code
+ * @returns {string} Hex HMAC-SHA256 keyed with the pepper.
+ */
+export function hashOtp(code) {
+  return createHmac('sha256', env.PASSWORD_PEPPER).update(code).digest('hex');
 }
 
 /**

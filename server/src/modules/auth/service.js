@@ -1,11 +1,14 @@
 import { env } from '../../config/env.js';
 import {
   fakeVerifyDelay,
+  generateOtp,
   generateOpaqueToken,
+  hashOtp,
   hashPassword,
   hashToken,
   needsRehash,
   newTokenFamilyId,
+  safeEqual,
   verifyPassword,
 } from '../../lib/crypto.js';
 import {
@@ -31,8 +34,8 @@ import { toPublicUser } from './schema.js';
 
 const MAX_FAILED_LOGINS = 5;
 const LOCKOUT_MINUTES = 15;
-const RESET_TOKEN_TTL_MINUTES = 30;
-const VERIFY_TOKEN_TTL_HOURS = 24;
+const OTP_TTL_MINUTES = 15;
+const MAX_OTP_ATTEMPTS = 5;
 
 /** Access-token lifetime in seconds, for the `expiresIn` field. */
 function accessTokenSeconds() {
@@ -101,6 +104,49 @@ function buildSession(app, user, refreshToken) {
   };
 }
 
+/**
+ * Validate a presented 6-digit code against the freshest active code for a
+ * user, on a given token model (`emailVerificationToken` or
+ * `passwordResetToken`).
+ *
+ * Failure paths:
+ *  - no active code, or an expired one → 401, same message regardless so a
+ *    caller cannot tell "no account" from "code spent"
+ *  - a wrong code counts toward the per-code attempt budget; once exhausted
+ *    the code is locked (403) until a fresh one is issued, so a 6-digit guess
+ *    space cannot be walked through the API
+ *
+ * On success the caller is responsible for marking the row used.
+ */
+async function consumeOtp(app, { userId, code, model }) {
+  const stored = await app.prisma[model].findFirst({
+    where: { userId, usedAt: null },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (!stored || stored.expiresAt < new Date()) {
+    throw new UnauthorizedError('This code is invalid or has expired. Request a new one.');
+  }
+
+  if (stored.attempts >= MAX_OTP_ATTEMPTS) {
+    throw new ForbiddenError('Too many incorrect codes. Request a new one.');
+  }
+
+  if (!safeEqual(hashOtp(code), stored.tokenHash)) {
+    const attempts = stored.attempts + 1;
+    const locked = attempts >= MAX_OTP_ATTEMPTS;
+    await app.prisma[model].update({
+      where: { id: stored.id },
+      data: { attempts },
+    });
+    throw locked
+      ? new ForbiddenError('Too many incorrect codes. Request a new one.')
+      : new UnauthorizedError('Incorrect code. Please try again.');
+  }
+
+  return stored;
+}
+
 // ---------------------------------------------------------------------------
 
 export async function register(app, request, input) {
@@ -132,16 +178,16 @@ export async function register(app, request, input) {
     },
   });
 
-  const { token, hash } = generateOpaqueToken();
+  const { code, hash } = generateOtp();
   await app.prisma.emailVerificationToken.create({
     data: {
       userId: user.id,
       tokenHash: hash,
-      expiresAt: new Date(Date.now() + VERIFY_TOKEN_TTL_HOURS * 3600 * 1000),
+      expiresAt: new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000),
     },
   });
 
-  const mail = verificationEmail(token);
+  const mail = verificationEmail(code);
   await sendMail({ to: user.email, ...mail, logger: request.log });
 
   await audit(app, {
@@ -346,22 +392,22 @@ export async function forgotPassword(app, request, { email }) {
   const user = await app.prisma.user.findUnique({ where: { email } });
 
   if (user && !user.deletedAt) {
-    // Invalidate outstanding resets so only the newest link works.
+    // Invalidate outstanding resets so only the newest code works.
     await app.prisma.passwordResetToken.updateMany({
       where: { userId: user.id, usedAt: null },
       data: { usedAt: new Date() },
     });
 
-    const { token, hash } = generateOpaqueToken();
+    const { code, hash } = generateOtp();
     await app.prisma.passwordResetToken.create({
       data: {
         userId: user.id,
         tokenHash: hash,
-        expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MINUTES * 60 * 1000),
+        expiresAt: new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000),
       },
     });
 
-    const mail = passwordResetEmail(token);
+    const mail = passwordResetEmail(code);
     await sendMail({ to: user.email, ...mail, logger: request.log });
 
     await audit(app, {
@@ -379,22 +425,37 @@ export async function forgotPassword(app, request, { email }) {
   }
 
   return {
-    message: 'If that email has an account, a reset link is on its way.',
+    message: 'If that email has an account, a reset code is on its way.',
   };
 }
 
-export async function resetPassword(app, request, { token, password }) {
-  const stored = await app.prisma.passwordResetToken.findUnique({
-    where: { tokenHash: hashToken(token) },
-    include: { user: true },
-  });
+export async function resetPassword(app, request, { email, otp, newPassword }) {
+  const user = await app.prisma.user.findUnique({ where: { email } });
 
-  if (!stored || stored.usedAt || stored.expiresAt < new Date() || stored.user.deletedAt) {
-    await audit(app, { action: 'auth.password_reset_invalid_token', request });
-    throw new UnauthorizedError('This reset link is invalid or has expired');
+  if (!user || user.deletedAt) {
+    await audit(app, {
+      action: 'auth.password_reset_invalid_code',
+      request,
+    });
+    throw new UnauthorizedError('This code is invalid or has expired. Request a new one.');
   }
 
-  const passwordHash = await hashPassword(password);
+  let stored;
+  try {
+    stored = await consumeOtp(app, {
+      userId: user.id,
+      code: otp,
+      model: 'passwordResetToken',
+    });
+  } catch (error) {
+    await audit(app, {
+      action: 'auth.password_reset_invalid_code',
+      request,
+    });
+    throw error;
+  }
+
+  const passwordHash = await hashPassword(newPassword);
 
   await app.prisma.$transaction([
     app.prisma.user.update({
@@ -424,15 +485,20 @@ export async function resetPassword(app, request, { token, password }) {
   return { message: 'Password updated. Please sign in with your new password.' };
 }
 
-export async function verifyEmail(app, request, { token }) {
-  const stored = await app.prisma.emailVerificationToken.findUnique({
-    where: { tokenHash: hashToken(token) },
-    include: { user: true },
-  });
+export async function verifyEmail(app, request, { email, otp }) {
+  const user = await app.prisma.user.findUnique({ where: { email } });
 
-  if (!stored || stored.usedAt || stored.expiresAt < new Date()) {
-    throw new UnauthorizedError('This verification link is invalid or has expired');
+  // Same reply for an unknown address, a deleted account, an already-verified
+  // one, or a spent code — no path here may reveal whether the address exists.
+  if (!user || user.deletedAt || user.emailVerifiedAt) {
+    throw new UnauthorizedError('This code is invalid or has expired. Request a new one.');
   }
+
+  const stored = await consumeOtp(app, {
+    userId: user.id,
+    code: otp,
+    model: 'emailVerificationToken',
+  });
 
   await app.prisma.$transaction([
     app.prisma.user.update({
@@ -465,21 +531,21 @@ export async function resendVerification(app, request, { email }) {
       data: { usedAt: new Date() },
     });
 
-    const { token, hash } = generateOpaqueToken();
+    const { code, hash } = generateOtp();
     await app.prisma.emailVerificationToken.create({
       data: {
         userId: user.id,
         tokenHash: hash,
-        expiresAt: new Date(Date.now() + VERIFY_TOKEN_TTL_HOURS * 3600 * 1000),
+        expiresAt: new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000),
       },
     });
 
-    const mail = verificationEmail(token);
+    const mail = verificationEmail(code);
     await sendMail({ to: user.email, ...mail, logger: request.log });
   }
 
   // Same reply regardless — including for an address that is already verified.
-  return { message: 'If that address needs verification, a new link is on its way.' };
+  return { message: 'If that address needs verification, a new code is on its way.' };
 }
 
 export async function changePassword(app, request, userId, { currentPassword, newPassword }) {
