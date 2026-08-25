@@ -24,6 +24,7 @@
 ## 3. Transportation Page
 
 - Page displays static content instead of dynamic live data (API integration / data-binding missing).
+- Transport section needs proper bus details from bus route and timeline.md - all bus info should be displayed properly (routes, timings, stops, etc.).
 - Change UI color scheme (Dark Green UI requested).
 
 ## 4. CGPA Calculator Page
@@ -67,6 +68,7 @@
 
 - Landing page layout elements are overlapping and require layout adjustment.
 - Entire web UI needs to be enhanced to meet professional standards across all pages.
+- Transport section needs proper bus details from bus route and timeline.md - all bus info should be displayed properly (routes, timings, stops, etc.).
 
 ## 2. Cover Page Maker
 
