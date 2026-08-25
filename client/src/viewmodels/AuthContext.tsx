@@ -49,6 +49,9 @@ interface AuthContextValue {
   }) => Promise<AppUser>;
   signOut: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
+  verifyEmail: (email: string, otp: string) => Promise<void>;
+  resendVerification: (email: string) => Promise<void>;
+  resetPassword: (email: string, otp: string, newPassword: string) => Promise<void>;
   refreshProfile: () => Promise<AppUser>;
 }
 
@@ -124,6 +127,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await apiClient.post('/auth/forgot-password', { email });
   }, []);
 
+  const verifyEmail = useCallback(async (email: string, otp: string) => {
+    await apiClient.post('/auth/verify-email', { email, otp });
+  }, []);
+
+  const resendVerification = useCallback(async (email: string) => {
+    await apiClient.post('/auth/resend-verification', { email });
+  }, []);
+
+  const resetPassword = useCallback(
+    async (email: string, otp: string, newPassword: string) => {
+      await apiClient.post('/auth/reset-password', { email, otp, newPassword });
+    },
+    [],
+  );
+
   const refreshProfile = useCallback(async () => {
     const me = await apiClient.get<AppUser>('/me');
     setUser(me);
@@ -139,9 +157,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       signOut,
       forgotPassword,
+      verifyEmail,
+      resendVerification,
+      resetPassword,
       refreshProfile,
     }),
-    [user, isRestoring, login, register, signOut, forgotPassword, refreshProfile],
+    [user, isRestoring, login, register, signOut, forgotPassword, verifyEmail, resendVerification, resetPassword, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

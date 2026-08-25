@@ -53,6 +53,17 @@ export const passwordSchema = z
 
 export const nameSchema = z.string().trim().min(2, 'Name is required').max(120);
 
+/**
+ * A 6-digit numeric code from the verification / reset emails.
+ *
+ * Exactly six digits and nothing else: the code is compared as a hash server
+ * side, and the shape here is what keeps that comparison bounded.
+ */
+export const otpSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{6}$/, 'Enter the 6-digit code');
+
 // --- Requests ---------------------------------------------------------------
 
 export const registerBodySchema = z
@@ -91,13 +102,17 @@ export const forgotPasswordBodySchema = z.object({ email: emailSchema }).strict(
 
 export const resetPasswordBodySchema = z
   .object({
-    token: z.string().min(1).max(200),
-    password: passwordSchema,
+    email: emailSchema,
+    otp: otpSchema,
+    newPassword: passwordSchema,
   })
   .strict();
 
 export const verifyEmailBodySchema = z
-  .object({ token: z.string().min(1).max(200) })
+  .object({
+    email: emailSchema,
+    otp: otpSchema,
+  })
   .strict();
 
 export const resendVerificationBodySchema = z.object({ email: emailSchema }).strict();

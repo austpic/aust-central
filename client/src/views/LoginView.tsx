@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Loader2, Lock, Mail, ArrowRight } from 'lucide-react';
 import Field from '../components/Field';
 import AuthLayout from '../components/AuthLayout';
@@ -12,6 +12,7 @@ import { useLoginViewModel } from '../viewmodels/useLoginViewModel';
 export default function LoginView() {
   const toast = useToast();
   const vm = useLoginViewModel();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (vm.message) {
@@ -56,7 +57,7 @@ export default function LoginView() {
         </label>
         <button
           type="button"
-          onClick={vm.forgotPassword}
+          onClick={() => navigate('/forgot-password')}
           className="text-[14px] font-semibold text-primary hover:underline"
         >
           Forgot Password?

@@ -1,6 +1,7 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createTestApp, useCleanDatabase } from './helpers/app.js';
+import * as crypto from '../src/lib/crypto.js';
 
 /**
  * Auth suite.
@@ -29,6 +30,23 @@ async function registerUser(overrides = {}) {
   const response = await post('/register', { ...VALID, ...overrides });
   return { response, body: response.json() };
 }
+
+/**
+ * Pin OTP generation so tests know the code a user "receives".
+ *
+ * The mailer only logs in the test environment, so the code is not readable
+ * from the transport; stubbing the generator is the next best thing — it
+ * exercises the real storage, hashing, and comparison paths end to end.
+ */
+function fixedOtp() {
+  const code = '123456';
+  vi.spyOn(crypto, 'generateOtp').mockReturnValue({ code, hash: crypto.hashOtp(code) });
+  return code;
+}
+
+beforeEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('POST /auth/register', () => {
   it('creates an account and returns a session', async () => {
@@ -212,12 +230,211 @@ describe('POST /auth/forgot-password', () => {
 });
 
 describe('POST /auth/reset-password', () => {
-  it('rejects an invalid token', async () => {
+  it('rejects a code that was never issued', async () => {
+    await registerUser();
     const response = await post('/reset-password', {
-      token: 'bogus',
-      password: 'BrandNewPass1',
+      email: VALID.email,
+      otp: '123456',
+      newPassword: 'BrandNewPass1',
     });
     expect(response.statusCode).toBe(401);
+  });
+
+  it('resets the password with the emailed code and revokes every session', async () => {
+    const { body } = await registerUser();
+    const code = fixedOtp();
+    await post('/forgot-password', { email: VALID.email });
+
+    const response = await post('/reset-password', {
+      email: VALID.email,
+      otp: code,
+      newPassword: 'BrandNewPass1',
+    });
+    expect(response.statusCode).toBe(200);
+
+    // The old password no longer works.
+    const oldLogin = await post('/login', { email: VALID.email, password: VALID.password });
+    expect(oldLogin.statusCode).toBe(401);
+
+    // The new password does.
+    const newLogin = await post('/login', { email: VALID.email, password: 'BrandNewPass1' });
+    expect(newLogin.statusCode).toBe(200);
+
+    // The session issued at register dies with the reset.
+    const stale = await post('/refresh', { refreshToken: body.refreshToken });
+    expect(stale.statusCode).toBe(401);
+  });
+
+  it('accepts a reset code only once', async () => {
+    await registerUser();
+    const code = fixedOtp();
+    await post('/forgot-password', { email: VALID.email });
+
+    const first = await post('/reset-password', {
+      email: VALID.email,
+      otp: code,
+      newPassword: 'BrandNewPass1',
+    });
+    expect(first.statusCode).toBe(200);
+
+    const replay = await post('/reset-password', {
+      email: VALID.email,
+      otp: code,
+      newPassword: 'AnotherPass1',
+    });
+    expect(replay.statusCode).toBe(401);
+  });
+
+  it('rejects a wrong reset code', async () => {
+    await registerUser();
+    await post('/forgot-password', { email: VALID.email });
+
+    const response = await post('/reset-password', {
+      email: VALID.email,
+      otp: '000000',
+      newPassword: 'BrandNewPass1',
+    });
+    expect(response.statusCode).toBe(401);
+  });
+
+  it('rejects an expired reset code', async () => {
+    await registerUser();
+    const code = fixedOtp();
+    await post('/forgot-password', { email: VALID.email });
+    await app.prisma.passwordResetToken.updateMany({
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+
+    const response = await post('/reset-password', {
+      email: VALID.email,
+      otp: code,
+      newPassword: 'BrandNewPass1',
+    });
+    expect(response.statusCode).toBe(401);
+  });
+
+  it('locks the reset code after too many wrong attempts', async () => {
+    await registerUser();
+    const code = fixedOtp();
+    await post('/forgot-password', { email: VALID.email });
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await post('/reset-password', {
+        email: VALID.email,
+        otp: '000000',
+        newPassword: 'BrandNewPass1',
+      });
+    }
+
+    // Even the correct code is now refused — the budget is spent.
+    const correct = await post('/reset-password', {
+      email: VALID.email,
+      otp: code,
+      newPassword: 'BrandNewPass1',
+    });
+    expect(correct.statusCode).toBe(403);
+  });
+
+  it('answers the same for an unknown email as for a spent code', async () => {
+    const unknown = await post('/reset-password', {
+      email: 'nobody@example.com',
+      otp: '123456',
+      newPassword: 'BrandNewPass1',
+    });
+    expect(unknown.statusCode).toBe(401);
+
+    // Same message as the "never issued" case above — no account oracle.
+    expect(unknown.json().error.message).toBe(
+      'This code is invalid or has expired. Request a new one.',
+    );
+  });
+
+  it('enforces the password policy on the new password', async () => {
+    await registerUser();
+    const code = fixedOtp();
+    await post('/forgot-password', { email: VALID.email });
+
+    const response = await post('/reset-password', {
+      email: VALID.email,
+      otp: code,
+      newPassword: 'weak',
+    });
+    expect(response.statusCode).toBe(422);
+    expect(response.json().error.details.fields.newPassword).toBeDefined();
+  });
+});
+
+describe('POST /auth/verify-email', () => {
+  it('verifies the address with the emailed code, once', async () => {
+    const code = fixedOtp();
+    await registerUser();
+
+    const response = await post('/verify-email', { email: VALID.email, otp: code });
+    expect(response.statusCode).toBe(200);
+
+    const user = await app.prisma.user.findUnique({ where: { email: VALID.email } });
+    expect(user.emailVerifiedAt).not.toBeNull();
+
+    // The same code cannot verify again.
+    const replay = await post('/verify-email', { email: VALID.email, otp: code });
+    expect(replay.statusCode).toBe(401);
+  });
+
+  it('rejects a wrong code', async () => {
+    fixedOtp();
+    await registerUser();
+    const response = await post('/verify-email', { email: VALID.email, otp: '000000' });
+    expect(response.statusCode).toBe(401);
+    expect(response.json().error.message).not.toBe('Email verified.');
+  });
+
+  it('rejects an expired code', async () => {
+    const code = fixedOtp();
+    await registerUser();
+    await app.prisma.emailVerificationToken.updateMany({
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+
+    const response = await post('/verify-email', { email: VALID.email, otp: code });
+    expect(response.statusCode).toBe(401);
+  });
+
+  it('locks the code after too many wrong attempts', async () => {
+    const code = fixedOtp();
+    await registerUser();
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await post('/verify-email', { email: VALID.email, otp: '000000' });
+    }
+
+    const correct = await post('/verify-email', { email: VALID.email, otp: code });
+    expect(correct.statusCode).toBe(403);
+  });
+
+  it('answers identically for an unknown address and a spent code', async () => {
+    const unknown = await post('/verify-email', { email: 'nobody@example.com', otp: '123456' });
+    expect(unknown.statusCode).toBe(401);
+
+    const code = fixedOtp();
+    await registerUser();
+    await post('/verify-email', { email: VALID.email, otp: code });
+
+    const spent = await post('/verify-email', { email: VALID.email, otp: code });
+    expect(spent.statusCode).toBe(401);
+    expect(spent.json().error.message).toBe(unknown.json().error.message);
+  });
+
+  it('does not let a resend before verification exceed one live code', async () => {
+    const code = fixedOtp();
+    await registerUser();
+    await post('/resend-verification', { email: VALID.email });
+
+    const live = await app.prisma.emailVerificationToken.count({ where: { usedAt: null } });
+    expect(live).toBe(1);
+
+    // The freshest code is the one emailed last.
+    const response = await post('/verify-email', { email: VALID.email, otp: code });
+    expect(response.statusCode).toBe(200);
   });
 });
 

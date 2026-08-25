@@ -7,7 +7,7 @@ import { useAuth, authErrorMessage } from './AuthContext';
 // the API, replacing the previous mock (any non-empty email/password).
 export function useLoginViewModel() {
   const navigate = useNavigate();
-  const { login, forgotPassword } = useAuth();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -30,22 +30,6 @@ export function useLoginViewModel() {
     }
   }
 
-  async function requestPasswordReset() {
-    if (!email.trim()) {
-      setMessage('Enter your email above to reset your password.');
-      return;
-    }
-    try {
-      await forgotPassword(email.trim());
-      // Phrased to match the server, which deliberately answers the same way
-      // whether or not the address has an account — see forgotPassword in
-      // the API. This is not a display bug; it is the point.
-      setMessage('If that email has an account, a reset link is on its way.');
-    } catch (error) {
-      setMessage(authErrorMessage(error));
-    }
-  }
-
   function clearMessage() {
     if (message) setMessage(null);
   }
@@ -60,7 +44,6 @@ export function useLoginViewModel() {
     isLoading,
     message,
     login: submit,
-    forgotPassword: requestPasswordReset,
     clearMessage,
   };
 }
