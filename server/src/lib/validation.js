@@ -17,6 +17,27 @@ export function booleanQuery(defaultValue = false) {
 }
 
 /**
+ * Derive a PATCH body schema from a create schema: every field optional, and
+ * every `.default()` removed.
+ *
+ * NOT a bare `createSchema.partial()`. Zod 4 still applies defaults to keys
+ * that are absent from a partial object, so `{ isDone: true }` would parse as
+ * `{ isDone: true, note: '', category: 'TODAY' }` and the update would
+ * silently reset every defaulted column the client never mentioned.
+ *
+ * @param {import('zod').ZodObject} schema
+ */
+export function partialWithoutDefaults(schema) {
+  const shape = Object.fromEntries(
+    Object.entries(schema.shape).map(([key, field]) => [
+      key,
+      field instanceof z.ZodDefault ? field.unwrap() : field,
+    ]),
+  );
+  return z.object(shape).partial();
+}
+
+/**
  * Wires Zod into Fastify's schema slots.
  *
  * On plain JavaScript there is no compile-time type checking, so these runtime

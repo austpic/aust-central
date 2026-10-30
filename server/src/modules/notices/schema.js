@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { paginationQuerySchema } from '../../lib/pagination.js';
+import { partialWithoutDefaults } from '../../lib/validation.js';
 
 export const noticeCategorySchema = z.enum(['ACADEMIC', 'EXAM', 'EVENT', 'GENERAL']);
 
@@ -26,8 +27,7 @@ export const createNoticeBodySchema = z
   })
   .strict();
 
-export const updateNoticeBodySchema = createNoticeBodySchema
-  .partial()
+export const updateNoticeBodySchema = partialWithoutDefaults(createNoticeBodySchema)
   .strict()
   .refine((v) => Object.keys(v).length > 0, { message: 'Provide at least one field' });
 

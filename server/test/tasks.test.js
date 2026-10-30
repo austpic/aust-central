@@ -72,6 +72,33 @@ describe('tasks CRUD', () => {
     expect(updated.json().isDone).toBe(true);
   });
 
+  it('leaves fields the PATCH did not mention untouched', async () => {
+    // Pins partialWithoutDefaults: a plain `.partial()` on Zod 4 re-applies
+    // the create schema's defaults, which would reset note and category here.
+    const user = await createUser(app);
+    const created = await app.inject({
+      method: 'POST',
+      url,
+      headers: user.headers,
+      payload: { title: 'Lab report', note: 'Due Thursday', category: 'LATER' },
+    });
+    const { id } = created.json();
+
+    const updated = await app.inject({
+      method: 'PATCH',
+      url: `${url}/${id}`,
+      headers: user.headers,
+      payload: { isDone: true },
+    });
+
+    expect(updated.statusCode).toBe(200);
+    expect(updated.json()).toMatchObject({
+      isDone: true,
+      note: 'Due Thursday',
+      category: 'LATER',
+    });
+  });
+
   it('deletes a task', async () => {
     const user = await createUser(app);
     const created = await app.inject({

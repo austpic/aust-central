@@ -38,7 +38,7 @@ const csv = (value) =>
 /** Secrets must be long enough that brute-forcing the signature is not viable. */
 const secret = (name) =>
   z
-    .string({ required_error: `${name} is required` })
+    .string({ error: `${name} is required` })
     .min(32, `${name} must be at least 32 characters`);
 
 const schema = z
@@ -49,13 +49,41 @@ const schema = z
       .default('info'),
 
     HOST: z.string().default('0.0.0.0'),
+
+    /**
+     * Which upstream hops may set X-Forwarded-For. Rate limiting, lockout and
+     * audit logs all key on `request.ip`, so trusting the header from a client
+     * that is NOT behind our proxy lets it spoof any IP and walk straight past
+     * the auth limiter. "false" (default): use the socket address. A number:
+     * trust that many hops (1 behind a single reverse proxy). Anything else:
+     * a comma-separated list of proxy IPs/CIDRs.
+     */
+    TRUST_PROXY: z
+      .string()
+      .default('false')
+      .transform((value) => {
+        const trimmed = value.trim();
+        if (trimmed === 'false' || trimmed === '') return false;
+        if (trimmed === 'true') return true;
+        if (/^\d+$/.test(trimmed)) return Number(trimmed);
+        return csv(trimmed);
+      }),
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),
 
-    // Public origin of the API itself, used to build links in outbound email.
+    // Public origin of the API itself.
     PUBLIC_URL: z.string().url().default('http://localhost:3000'),
 
+    // Public origin of the web app. Password-reset and verification emails
+    // link here (/reset-password, /verify-email) — those pages live in the web
+    // client, not the API, so links built from PUBLIC_URL would 404.
+    APP_URL: z
+      .string()
+      .url()
+      .default('http://localhost:5173')
+      .transform((value) => value.replace(/\/+$/, '')),
+
     DATABASE_URL: z
-      .string({ required_error: 'DATABASE_URL is required' })
+      .string({ error: 'DATABASE_URL is required' })
       .startsWith('postgres', 'DATABASE_URL must be a PostgreSQL connection string'),
 
     // --- Auth ---------------------------------------------------------------
@@ -133,11 +161,28 @@ const schema = z
       });
     }
 
+    if (env.TRUST_PROXY === true) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['TRUST_PROXY'],
+        message:
+          'TRUST_PROXY=true trusts X-Forwarded-For from anyone — use a hop count (e.g. 1) or proxy addresses',
+      });
+    }
+
     if (!env.PUBLIC_URL.startsWith('https://')) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['PUBLIC_URL'],
         message: 'PUBLIC_URL must use https in production',
+      });
+    }
+
+    if (!env.APP_URL.startsWith('https://')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['APP_URL'],
+        message: 'APP_URL must use https in production — emailed links carry one-time tokens',
       });
     }
   });

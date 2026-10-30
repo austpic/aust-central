@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { paginationQuerySchema } from '../../lib/pagination.js';
-import { booleanQuery } from '../../lib/validation.js';
+import { booleanQuery, partialWithoutDefaults } from '../../lib/validation.js';
 
 export const lostFoundKindSchema = z.enum(['LOST', 'FOUND']);
 export const lostFoundStatusSchema = z.enum(['OPEN', 'CLAIMED', 'RESOLVED']);
@@ -37,8 +37,7 @@ export const createLostFoundBodySchema = z
   })
   .strict();
 
-export const updateLostFoundBodySchema = createLostFoundBodySchema
-  .partial()
+export const updateLostFoundBodySchema = partialWithoutDefaults(createLostFoundBodySchema)
   .extend({ status: lostFoundStatusSchema.optional() })
   .strict()
   .refine((v) => Object.keys(v).length > 0, { message: 'Provide at least one field' });

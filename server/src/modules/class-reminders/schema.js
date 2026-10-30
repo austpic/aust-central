@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { partialWithoutDefaults } from '../../lib/validation.js';
+
 export const weekdaySchema = z.enum([
   'SUNDAY',
   'MONDAY',
@@ -47,8 +49,7 @@ export const createReminderBodySchema = z
   })
   .strict();
 
-export const updateReminderBodySchema = createReminderBodySchema
-  .partial()
+export const updateReminderBodySchema = partialWithoutDefaults(createReminderBodySchema)
   .strict()
   .refine((v) => Object.keys(v).length > 0, {
     message: 'Provide at least one field to update',

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { paginationQuerySchema } from '../../lib/pagination.js';
+import { partialWithoutDefaults } from '../../lib/validation.js';
 
 /** Mirrors `TaskCategory` in the Flutter app's todo_list_screen.dart. */
 export const taskCategorySchema = z.enum(['TODAY', 'LATER']);
@@ -30,8 +31,7 @@ export const createTaskBodySchema = z
  * All fields optional, but at least one required — an empty PATCH is almost
  * always a client bug, and silently succeeding hides it.
  */
-export const updateTaskBodySchema = createTaskBodySchema
-  .partial()
+export const updateTaskBodySchema = partialWithoutDefaults(createTaskBodySchema)
   .extend({ isDone: z.boolean().optional() })
   .strict()
   .refine((value) => Object.keys(value).length > 0, {
