@@ -1,5 +1,9 @@
+import { readFile } from 'node:fs/promises';
+
 import { PrismaClient } from '@prisma/client';
 import argon2 from 'argon2';
+
+import { loadTransport } from './transport.js';
 
 /**
  * Development seed.
@@ -8,43 +12,23 @@ import argon2 from 'argon2';
  * real rows, so the app has something to render the moment it points at this
  * server. Idempotent — safe to run repeatedly.
  *
- * NOT for production: it creates accounts with known passwords.
+ * NOT for production: it creates accounts with known passwords, and refuses
+ * to run when NODE_ENV=production. Production bootstraps with
+ * `npm run admin:create` and `npm run transport:load` instead.
  */
+
+if (process.env.NODE_ENV === 'production') {
+  console.error(
+    'Refusing to seed: NODE_ENV=production. The demo seed creates accounts with a ' +
+      'published password. Use `npm run admin:create` and `npm run transport:load`.',
+  );
+  process.exit(1);
+}
 
 const prisma = new PrismaClient();
 
 const PEPPER = process.env.PASSWORD_PEPPER ?? '';
 const DEMO_PASSWORD = 'DemoPassword1';
-
-/** The 12 selectable places from bus_page.dart, then the campus-bound legs. */
-const STOPS = [
-  'Mirpur', 'Ansar Camp', 'Technical', 'Kalyanpur', 'Shyamoli', 'Ring Road',
-  'Shia Mashjid', 'Mohammadpur', 'Asadgate', 'Manik Mia', 'Khamar Bari', 'Farmgate',
-  'Bijoy Sarani', 'Mohakhali', 'Banani', 'Gulshan', 'AUST',
-];
-
-/** Buses and routes from bus_selection_page.dart, extended to start at Mirpur. */
-const BUSES = [
-  {
-    name: 'Meghna - 1',
-    driverNumber: '+880 1711-000001',
-    route: ['Mirpur', 'Kalyanpur', 'Shyamoli', 'Asadgate', 'Farmgate', 'Bijoy Sarani', 'Mohakhali', 'AUST'],
-  },
-  {
-    name: 'Jamuna - 2',
-    driverNumber: '+880 1711-000002',
-    route: ['Technical', 'Shyamoli', 'Ring Road', 'Mohammadpur', 'Asadgate', 'Farmgate', 'Banani', 'Mohakhali', 'AUST'],
-  },
-  {
-    name: 'Padma - 1',
-    driverNumber: '+880 1711-000003',
-    route: ['Ansar Camp', 'Kalyanpur', 'Shia Mashjid', 'Manik Mia', 'Khamar Bari', 'Farmgate', 'Bijoy Sarani', 'Gulshan', 'AUST'],
-  },
-];
-
-/** The five daily slots from schedule_page.dart, normalised to 24-hour. */
-const DEPARTURE_TIMES = ['06:00', '08:30', '13:30', '15:30', '18:30'];
-const WEEKDAYS = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY'];
 
 /** Notices from notice_board_screen.dart. */
 const NOTICES = [
@@ -156,42 +140,11 @@ async function main() {
   console.log('  users: 3');
 
   // --- Transport ---
-  const stops = new Map();
-  for (const name of STOPS) {
-    const stop = await prisma.busStop.upsert({
-      where: { name },
-      create: { name },
-      update: {},
-    });
-    stops.set(name, stop.id);
-  }
-
-  for (const definition of BUSES) {
-    const bus = await prisma.bus.upsert({
-      where: { name: definition.name },
-      create: { name: definition.name, driverNumber: definition.driverNumber },
-      update: { driverNumber: definition.driverNumber },
-    });
-
-    // Rebuild the route each run so edits above take effect.
-    await prisma.routeStop.deleteMany({ where: { busId: bus.id } });
-    await prisma.routeStop.createMany({
-      data: definition.route.map((stopName, position) => ({
-        busId: bus.id,
-        stopId: stops.get(stopName),
-        position,
-      })),
-    });
-
-    for (const departureTime of DEPARTURE_TIMES) {
-      await prisma.departure.upsert({
-        where: { busId_departureTime: { busId: bus.id, departureTime } },
-        create: { busId: bus.id, departureTime, daysOfWeek: WEEKDAYS },
-        update: { daysOfWeek: WEEKDAYS },
-      });
-    }
-  }
-  console.log(`  stops: ${STOPS.length}, buses: ${BUSES.length}, departures: ${BUSES.length * DEPARTURE_TIMES.length}`);
+  const transport = await loadTransport(
+    prisma,
+    JSON.parse(await readFile(new URL('./transport.example.json', import.meta.url), 'utf8')),
+  );
+  console.log(`  stops: ${transport.stops}, buses: ${transport.buses}`);
 
   // --- Notices ---
   if ((await prisma.notice.count()) === 0) {

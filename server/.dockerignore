@@ -1,0 +1,13 @@
+node_modules
+.env
+.env.*
+!.env.example
+storage
+storage-test
+uploads
+coverage
+test
+*.log
+Dockerfile
+.dockerignore
+docker-compose.yml

@@ -1,0 +1,48 @@
+# Public entry point: HTTPS, the API under /api, the SPA everywhere else.
+#
+# DOMAIN is the public hostname. Caddy obtains and renews its certificate
+# automatically (ports 80 and 443 must reach this container). DOMAIN=localhost
+# gets a locally-trusted internal certificate, for trying the stack out.
+
+{$DOMAIN:localhost} {
+	encode zstd gzip
+
+	# HSTS for everything on this host, API included.
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+	# The API sets its own security headers (helmet), so none are added here.
+	# Caddy replaces any client-supplied X-Forwarded-For with the real peer
+	# address, which is why the API can run with TRUST_PROXY=1.
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+
+	handle {
+		root * /srv
+
+		header {
+			# Fonts come from Google Fonts (index.html); everything else is
+			# self-hosted. 'unsafe-inline' for styles covers React style={…}
+			# attributes — scripts get no such allowance.
+			Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+			X-Content-Type-Options "nosniff"
+			# /reset-password and /verify-email arrive with a one-time token in
+			# the URL; never forward it to another origin.
+			Referrer-Policy "no-referrer"
+			Permissions-Policy "camera=(), microphone=(), geolocation=()"
+			Cross-Origin-Opener-Policy "same-origin"
+			-Server
+		}
+
+		# Hashed build assets never change; the HTML that names them must
+		# always be revalidated so a deploy takes effect immediately.
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@html not path /assets/*
+		header @html Cache-Control "no-cache"
+
+		# Client-side routes (/home, /reset-password, …) all serve the SPA.
+		try_files {path} /index.html
+		file_server
+	}
+}

@@ -1,0 +1,85 @@
+# Single-host production stack: Postgres, a one-shot migration, the API, and
+# Caddy (TLS + web client + /api reverse proxy). See deploy/README.md.
+#
+#   cd deploy
+#   cp .env.example .env    # fill in every value
+#   docker compose -f docker-compose.prod.yml up -d --build
+
+name: aust-central
+
+x-api-image: &api-image
+  build: ../server
+  image: aust-central-api:latest
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aust
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+      POSTGRES_DB: aust_central
+    # No published port: only the API, on the internal network, reaches it.
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U aust -d aust_central']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Applies pending migrations, then exits. The API waits for it to succeed,
+  # so a deploy with a broken migration never starts serving.
+  migrate:
+    <<: *api-image
+    command: ['npx', 'prisma', 'migrate', 'deploy']
+    restart: 'no'
+    environment:
+      DATABASE_URL: postgresql://aust:${POSTGRES_PASSWORD}@postgres:5432/aust_central?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    <<: *api-image
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://aust:${POSTGRES_PASSWORD}@postgres:5432/aust_central?schema=public
+      PUBLIC_URL: https://${DOMAIN:?set DOMAIN in deploy/.env}
+      APP_URL: https://${DOMAIN}
+      CORS_ORIGINS: https://${DOMAIN}
+      # Exactly one proxy (Caddy) sits in front of the API.
+      TRUST_PROXY: '1'
+    volumes:
+      - uploads:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    build: ../client
+    image: aust-central-web:latest
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      # Certificates and ACME account; losing these means re-issuing.
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  uploads:
+  caddy-data:
+  caddy-config:

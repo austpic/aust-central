@@ -59,9 +59,9 @@ export default [
   },
 
   {
-    files: ['prisma/seed.js'],
+    files: ['prisma/seed.js', 'scripts/**/*.js'],
     rules: {
-      // Seeding is a CLI script; progress output belongs on stdout.
+      // CLI scripts: progress output belongs on stdout.
       'no-console': 'off',
     },
   },

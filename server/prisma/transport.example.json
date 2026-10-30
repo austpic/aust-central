@@ -1,0 +1,223 @@
+{
+  "stops": [
+    "Mirpur",
+    "Ansar Camp",
+    "Technical",
+    "Kalyanpur",
+    "Shyamoli",
+    "Ring Road",
+    "Shia Mashjid",
+    "Mohammadpur",
+    "Asadgate",
+    "Manik Mia",
+    "Khamar Bari",
+    "Farmgate",
+    "Bijoy Sarani",
+    "Mohakhali",
+    "Banani",
+    "Gulshan",
+    "AUST"
+  ],
+  "buses": [
+    {
+      "name": "Meghna - 1",
+      "driverNumber": "+880 1711-000001",
+      "route": [
+        "Mirpur",
+        "Kalyanpur",
+        "Shyamoli",
+        "Asadgate",
+        "Farmgate",
+        "Bijoy Sarani",
+        "Mohakhali",
+        "AUST"
+      ],
+      "departures": [
+        {
+          "time": "06:00",
+          "days": [
+            "SUNDAY",
+            "MONDAY",
+            "TUESDAY",
+            "WEDNESDAY",
+            "THURSDAY"
+          ]
+        },
+        {
+          "time": "08:30",
+          "days": [
+            "SUNDAY",
+            "MONDAY",
+            "TUESDAY",
+            "WEDNESDAY",
+            "THURSDAY"
+          ]
+        },
+        {
+          "time": "13:30",
+          "days": [
+            "SUNDAY",
+            "MONDAY",
+            "TUESDAY",
+            "WEDNESDAY",
+            "THURSDAY"
+          ]
+        },
+        {
+          "time": "15:30",
+          "days": [
+            "SUNDAY",
+            "MONDAY",
+            "TUESDAY",
+            "WEDNESDAY",
+            "THURSDAY"
+          ]
+        },
+        {
+          "time": "18:30",
+          "days": [
+            "SUNDAY",
+            "MONDAY",
+            "TUESDAY",
+            "WEDNESDAY",
+            "THURSDAY"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Jamuna - 2",
+      "driverNumber": "+880 1711-000002",
+      "route": [
+        "Technical",
+        "Shyamoli",
+        "Ring Road",
+        "Mohammadpur",
+        "Asadgate",
+        "Farmgate",
+        "Banani",
+        "Mohakhali",
+        "AUST"
+      ],
+      "departures": [
+        {
+          "time": "06:00",
+          "days": [
+            "SUNDAY",
+            "MONDAY",
+            "TUESDAY",
+            "WEDNESDAY",
+            "THURSDAY"
+          ]
+        },
+        {
+          "time": "08:30",
+          "days": [
+            "SUNDAY",
+            "MONDAY",
+            "TUESDAY",
+            "WEDNESDAY",
+            "THURSDAY"
+          ]
+        },
+        {
+          "time": "13:30",
+          "days": [
+            "SUNDAY",
+            "MONDAY",
+            "TUESDAY",
+            "WEDNESDAY",
+            "THURSDAY"
+          ]
+        },
+        {
+          "time": "15:30",
+          "days": [
+            "SUNDAY",
+            "MONDAY",
+            "TUESDAY",
+            "WEDNESDAY",
+            "THURSDAY"
+          ]
+        },
+        {
+          "time": "18:30",
+          "days": [
+            "SUNDAY",
+            "MONDAY",
+            "TUESDAY",
+            "WEDNESDAY",
+            "THURSDAY"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Padma - 1",
+      "driverNumber": "+880 1711-000003",
+      "route": [
+        "Ansar Camp",
+        "Kalyanpur",
+        "Shia Mashjid",
+        "Manik Mia",
+        "Khamar Bari",
+        "Farmgate",
+        "Bijoy Sarani",
+        "Gulshan",
+        "AUST"
+      ],
+      "departures": [
+        {
+          "time": "06:00",
+          "days": [
+            "SUNDAY",
+            "MONDAY",
+            "TUESDAY",
+            "WEDNESDAY",
+            "THURSDAY"
+          ]
+        },
+        {
+          "time": "08:30",
+          "days": [
+            "SUNDAY",
+            "MONDAY",
+            "TUESDAY",
+            "WEDNESDAY",
+            "THURSDAY"
+          ]
+        },
+        {
+          "time": "13:30",
+          "days": [
+            "SUNDAY",
+            "MONDAY",
+            "TUESDAY",
+            "WEDNESDAY",
+            "THURSDAY"
+          ]
+        },
+        {
+          "time": "15:30",
+          "days": [
+            "SUNDAY",
+            "MONDAY",
+            "TUESDAY",
+            "WEDNESDAY",
+            "THURSDAY"
+          ]
+        },
+        {
+          "time": "18:30",
+          "days": [
+            "SUNDAY",
+            "MONDAY",
+            "TUESDAY",
+            "WEDNESDAY",
+            "THURSDAY"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -88,3 +88,25 @@ jobs:
       - run: npx tsc -b
       - run: npm test
       - run: npm run build
+
+  # Builds the production images exactly as deploy/docker-compose.prod.yml
+  # does, so a Dockerfile or build-context regression fails here rather than
+  # on the server during a deploy. Nothing is pushed.
+  images:
+    name: images (Docker)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate production compose file
+        working-directory: deploy
+        run: |
+          cp .env.example .env
+          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-only/' .env
+          docker compose -f docker-compose.prod.yml config --quiet
+
+      - run: docker build -t aust-central-api server
+      - run: docker build -t aust-central-web client
+
+      - name: Caddyfile is valid
+        run: docker run --rm -v "$PWD/client/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile

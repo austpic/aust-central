@@ -1,2 +1,5 @@
 node_modules/
 dist/
+
+# Production secrets
+deploy/.env
