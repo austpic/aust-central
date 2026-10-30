@@ -4,9 +4,9 @@ A campus companion app for students of Ahsanullah University of Science and Tech
 
 Three parts sharing one backend: a **Flutter app**, a **React web client**, and the **Node/Fastify/PostgreSQL API** that owns all the data.
 
-> **Status: beta.** Every feature on both clients is wired end to end — each reads and writes real data through the same API, and no screen on either client renders hardcoded fixtures. CI runs lint, tests, and a security audit on all three parts. Remaining work is release engineering, not features: see [§16 Known gaps](#16-known-gaps).
+> **Status: production-ready (single host).** Every feature on both clients is wired end to end against the same API. The production stack (`deploy/`: Caddy TLS + web client + API + Postgres) has been built and exercised end to end over HTTPS, including a real-browser session and the emailed password-reset flow. What remains is for the operator to supply, not to build: a domain, an SMTP account, the Android upload keystore, and the real transport schedule. See [Deploying](deploy/README.md) and [§16 Known gaps](#16-known-gaps).
 
-**Last verified:** 15 August 2026 · `flutter analyze` 0 errors · `flutter test` 14 passed · `npm run lint` clean (server + web) · **79 server tests** · **10 web tests** · `tsc -b` clean · web production build succeeds · CI green on all three jobs
+**Last verified:** 30 October 2026 · `flutter analyze` 0 errors · `flutter test` 14 passed · `npm run lint` clean (server + web) · **93 server tests** · **15 web tests** · `tsc -b` clean · web production build succeeds · `npm audit` 0 vulnerabilities (server + web) · production images built and smoke-tested
 
 ---
 
@@ -60,7 +60,7 @@ A Flutter app, a React web client, and a Node/Fastify/PostgreSQL API covering fi
 | Server tests | Vitest via `fastify.inject()` |
 | Web tests | Vitest + Testing Library |
 | App tests | `flutter_test`, fake repositories (no widget tree) + widget smoke tests |
-| CI | GitHub Actions, three independent jobs — see [§13](#13-testing) |
+| CI | GitHub Actions, four independent jobs — see [§13](#13-testing) |
 
 Because the server is plain JavaScript, **Zod schemas are the type safety**. They validate every request body, param, query, and response at runtime. ESLint is the static gate on the server; TypeScript's compiler (`tsc -b`) is the gate on the web client.
 
@@ -101,6 +101,8 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 
 ### Seeded accounts
 
+**Development only.** `npm run db:seed` refuses to run with `NODE_ENV=production`. Production creates its first staff account with `npm run admin:create` and loads buses with `npm run transport:load` instead (see [deploy/README.md](deploy/README.md#bootstrap-data)).
+
 Password for all three: `DemoPassword1`
 
 | Account | Role | Notes |
@@ -121,6 +123,8 @@ Registration (and every other email-taking endpoint) is restricted to `@aust.edu
 | iOS simulator / desktop | `http://localhost:3000/api/v1` | Default |
 | Physical device | Your machine's LAN IP | Must be passed explicitly |
 | Web dev server | `http://localhost:3000/api/v1` | **Default**, from `client/src/api/config.ts` |
+| Production web | `/api/v1` (same origin) | Baked in by `client/Dockerfile`; Caddy proxies `/api` to the API |
+| Production app | `https://<domain>/api/v1` | **Required** for release builds, and Gradle refuses a release build without it |
 
 ```bash
 # App, physical device
@@ -141,7 +145,9 @@ cd client && cp .env.example .env && echo 'VITE_API_BASE_URL=http://192.168.0.10
 | `npm run db:migrate` | Create + apply a migration from schema changes |
 | `npm run db:deploy` | Apply existing migrations (CI / production) |
 | `npm run db:reset` | Drop and rebuild the dev database |
-| `npm run db:seed` | Seed demo data |
+| `npm run db:seed` | Seed demo data (refuses in production) |
+| `npm run admin:create -- --email … [--role …]` | Create or promote a staff account (production-safe) |
+| `npm run transport:load -- <file.json>` | Load stops/buses/departures from a file (production-safe; format: `prisma/transport.example.json`) |
 | `npm run db:studio` | Prisma's data browser |
 | `npm run build` (client) | `tsc -b` then a production Vite build |
 
@@ -152,10 +158,12 @@ cd client && cp .env.example .env && echo 'VITE_API_BASE_URL=http://192.168.0.10
 ```text
 aust-central/
 ├── README.md                    Everything — this file
-├── .github/workflows/ci.yml     server / app / web jobs
-├── client/                      React web client (Vite, TypeScript)
+├── .github/workflows/ci.yml     server / app / web / images jobs
+├── .github/dependabot.yml       weekly dependency update PRs
+├── client/                      React web client (Vite, TypeScript) + Dockerfile/Caddyfile
+├── deploy/                      Production compose stack and runbook (deploy/README.md)
 ├── mobile/aust-central/         Flutter app (Dart package: aust_track)
-└── server/                      Node + Fastify + PostgreSQL API
+└── server/                      Node + Fastify + PostgreSQL API + Dockerfile, scripts/
 ```
 
 > The repo directory is `aust-central` but the **Dart package is `aust_track`** — all imports are `package:aust_track/...`.
@@ -404,7 +412,9 @@ All server environment variables are declared and validated in `src/config/env.j
 | --- | --- | --- |
 | `NODE_ENV` | `development` | `development` / `test` / `production` |
 | `PORT` | `3000` | |
-| `PUBLIC_URL` | `http://localhost:3000` | Used to build email links; **must be https in production** |
+| `PUBLIC_URL` | `http://localhost:3000` | The API's public origin; **must be https in production** |
+| `APP_URL` | `http://localhost:5173` | The **web app's** origin. Reset/verification emails link to `$APP_URL/reset-password` and `$APP_URL/verify-email`, which are web routes. **Must be https in production** |
+| `TRUST_PROXY` | `false` | Which proxies may set `X-Forwarded-For`: `false`, a hop count (`1` behind one reverse proxy), or proxy IPs/CIDRs. Rate limiting and lockout key on the client IP, so trusting the header from anyone would let clients spoof past the auth limiter. **`true` is rejected in production** |
 | `JWT_ACCESS_TTL` | `15m` | |
 | `REFRESH_TOKEN_TTL_DAYS` | `30` | |
 | `PASSWORD_MIN_LENGTH` | `10` | |
@@ -418,7 +428,7 @@ All server environment variables are declared and validated in `src/config/env.j
 
 ### Production-only invariants
 
-The server refuses to boot in production if: `CORS_ORIGINS` contains `*`, `PASSWORD_PEPPER` equals `JWT_ACCESS_SECRET`, `SMTP_HOST` is unset, or `PUBLIC_URL` is not `https://`.
+The server refuses to boot in production if: `CORS_ORIGINS` contains `*`, `PASSWORD_PEPPER` equals `JWT_ACCESS_SECRET`, `SMTP_HOST` is unset, `PUBLIC_URL` or `APP_URL` is not `https://`, or `TRUST_PROXY=true`. Each case is pinned in `test/config.test.js`.
 
 ### Web client
 
@@ -426,7 +436,7 @@ One optional variable, read by Vite (`client/src/api/config.ts`):
 
 | Variable | Default | Notes |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | `http://localhost:3000/api/v1` | Set in `client/.env` (copy from `.env.example`) to point at a non-default server |
+| `VITE_API_BASE_URL` | `http://localhost:3000/api/v1` | Set in `client/.env` (copy from `.env.example`) to point at a non-default server. May be relative (`/api/v1`), and the production image uses exactly that |
 
 ### Ports
 
@@ -622,6 +632,7 @@ Only `@aust.edu` addresses are valid at all (`ALLOWED_EMAIL_DOMAIN`, [§6](#6-co
 - **Access tokens**: 15-minute JWTs, HS256 with the **algorithm pinned** — this blocks `alg: none` and RS/HS confusion attacks, where a token declares its own weaker verification scheme.
 - **Refresh tokens**: 30-day opaque 256-bit values, stored **only as SHA-256**. A database dump cannot be replayed as a session.
 - **Rotation with reuse detection**: every refresh mints a new token and marks the old one used. Presenting a spent token means it leaked, so the **entire token family is revoked** and the event is audit-logged. Losing a session is a cheap price for containing theft.
+- **Rotation is atomic**: the token is marked used with a conditional update (`usedAt IS NULL`) inside the rotation transaction, so two requests racing with the same token cannot both mint a successor. The loser is treated as a replay.
 
 Access tokens are *not* checked against the database per request — that is what keeps reads cheap. The trade-off is that a token stays valid until it expires, so the TTL is short and anything that must take effect immediately (ban, password change) revokes the refresh family instead.
 
@@ -662,7 +673,7 @@ Local disk, and the riskiest surface here:
 
 ### Transport and headers
 
-helmet with a `default-src 'none'` CSP, HSTS in production only, CORS restricted to an explicit allowlist including the web client's dev origin (never `*` — `credentials: true` with a reflected origin would let any site drive authenticated requests), refresh cookie `httpOnly` + `sameSite=strict` + path-scoped to `/api/v1/auth`.
+helmet with a `default-src 'none'` CSP on the API, HSTS in production only, `X-Forwarded-For` trusted only from the hops named by `TRUST_PROXY`. The web client is served by Caddy with its own CSP (`script-src 'self'`, no inline script), `Referrer-Policy: no-referrer` (the reset/verify pages carry one-time tokens in the URL, and strip them on load), and immutable caching for hashed assets only. API responses get CORS restricted to an explicit allowlist including the web client's dev origin (never `*` — `credentials: true` with a reflected origin would let any site drive authenticated requests), refresh cookie `httpOnly` + `sameSite=strict` + path-scoped to `/api/v1/auth`.
 
 ### Dependency auditing
 
@@ -670,6 +681,8 @@ helmet with a `default-src 'none'` CSP, HSTS in production only, CORS restricted
 
 - **`@fastify/jwt` → `fast-jwt` (critical)**: a JWT auth-bypass via an empty HMAC secret accepted by the async key resolver, plus algorithm-confusion and cache-collision issues. Upgraded `^9.0.4` → `^10.2.2`; the plugin's registration options (`secret`, `sign`, `verify`) are unchanged, so `auth.js` required no code changes. All 79 tests, including the auth suite, pass unchanged.
 - **`nodemailer` (high)**: SMTP command injection and header injection advisories. Upgraded `^6.10.0` → `^9.0.5`. `mailer.js` uses only `createTransport({host, port, secure, auth})` and `sendMail({from, to, subject, text})`, which is stable across that range, and the test suite never exercises the real transport (SMTP is unconfigured in test, so mail is logged instead of sent) — so this was a genuinely safe upgrade, verified by a full test run rather than assumed.
+
+In the production-readiness pass, `npm audit` was failing on both packages. Every advisory was cleared by upgrading rather than ignoring: `zod` 3 → 4, `nodemailer` 9 → 10, `vitest` 3 → 5 (server) and 4 → 5 (web), `vite` 8.3, and an `overrides` pin of `deepmerge-ts` ≥ 8 under Prisma's CLI. Zod 4 changes one behaviour that matters: `.default()`s still apply inside `.partial()`, so `createSchema.partial()` PATCH bodies would have reset every defaulted column a client omitted. Update schemas are therefore built with `partialWithoutDefaults()` (`src/lib/validation.js`), and a regression test pins it. Dependabot (`.github/dependabot.yml`) now opens weekly update PRs for npm, pub, Docker and Actions.
 
 ### Operational
 
@@ -815,9 +828,9 @@ The one asymmetric module: all signed-in users read, only `MODERATOR`/`ADMIN` wr
 ## 13. Testing
 
 ```bash
-cd server && npm run lint && npm test                       # 79 tests
+cd server && npm run lint && npm test                       # 93 tests
 cd mobile/aust-central && flutter analyze && flutter test   # 14 tests
-cd client && npm run lint && npx tsc -b && npm test          # 10 tests
+cd client && npm run lint && npx tsc -b && npm test          # 15 tests
 ```
 
 ### Server
@@ -826,10 +839,11 @@ Tests run against a **real PostgreSQL** in Docker (port 5433), with migrations a
 
 | File | Tests | Focus |
 | --- | --- | --- |
-| `auth.test.js` | 25 | Registration, login, rotation, reuse detection, lockout, enumeration resistance, password change |
+| `auth.test.js` | 28 | Registration, login, rotation, reuse detection, the rotation race, cookie-only refresh/logout, lockout, enumeration resistance, password change |
 | `security.test.js` | 36 | Cross-module authorisation boundaries, plus the boolean-query-coercion and notification-idempotency regressions below |
-| `tasks.test.js` | 8 | CRUD + the ownership pattern all modules share |
+| `tasks.test.js` | 9 | CRUD, the ownership pattern all modules share, and PATCH not resetting omitted fields |
 | `calculations.test.js` | 10 | GPA maths and blood eligibility boundaries (no DB) |
+| `config.test.js` | 10 | Production env invariants, `TRUST_PROXY` parsing, emailed links pointing at the web app (no DB) |
 
 Registration/login domain restriction is forced **off** during tests (`test/test-env.js` sets `ALLOWED_EMAIL_DOMAIN=''` unconditionally, before any app code loads `.env`), because every test that creates a user registers with an `@example.com` address (`test/helpers/auth.js`) — a locally-enabled restriction must never leak into the suite from a developer's `.env`.
 
@@ -848,6 +862,9 @@ Security regressions pinned as first-class tests:
 - Another user's file id cannot be pinned as your avatar
 - `?mine=false` and `?unreadOnly=false` are treated as `false`, not `true` — `z.coerce.boolean()` reads the *string* `"false"` as truthy, which silently inverted these filters until caught by manual emulator testing and fixed with a custom `booleanQuery()` Zod helper
 - Re-marking an already-read notification is a 204 no-op, not a 404 — but another user's notification is still a genuine 404
+- A **body-less** `POST /auth/refresh` and `POST /auth/logout` (exactly what the browser sends, with the token only in the cookie) succeed. Before this was fixed both returned 422, so the web client lost its session on every reload and sign-out never revoked anything server-side
+- A refresh token spent concurrently mints at most one successor (the stale read is simulated deterministically)
+- A one-field PATCH leaves every other field untouched (Zod 4 `.partial()` + `.default()` hazard)
 
 ### App
 
@@ -870,20 +887,23 @@ No HTTP, no widget tree for the view-model tests — a fake repository is handed
 | --- | --- |
 | `api/client.test.ts` | 6 tests: `Content-Type` omitted on a bodyless request, sent when there's a body, two concurrent 401s collapse onto one refresh call, `onSessionExpired` fires when refresh itself fails, `/auth/*` paths never trigger a refresh loop |
 | `viewmodels/useClassReminderViewModel.test.ts` | 4 tests: same scenarios as the Flutter test above, via `vi.mock('../repositories/academic')` and `renderHook`, verifying both clients' identical view model contract independently |
+| `viewmodels/emailedLinks.test.ts` | 5 tests: the verify page spends its single-use token exactly once even under StrictMode and strips it from the URL; the reset page validates locally, submits the token, and surfaces an expired-link error |
 
 ### CI
 
-`.github/workflows/ci.yml` — three independent jobs on every push and PR:
+`.github/workflows/ci.yml` — four independent jobs on every push and PR:
 
 | Job | Steps |
 | --- | --- |
 | `server` | `npm ci` → `prisma generate` → `npm run lint` → `npm test` (against a `postgres-test` service container matching `docker-compose.yml`) → `npm audit --audit-level=high` |
 | `app` | `flutter pub get` → `flutter analyze` → `flutter test` |
 | `web` | `npm ci` → `npm run lint` → `tsc -b` → `npm test` → `npm run build` |
+| `images` | `docker compose config` on `deploy/docker-compose.prod.yml` → build the API and web images → `caddy validate` |
 
 ### Not covered
 
-- **The web client has not been exercised in a real browser end to end** in this pass beyond the automated suite above (register → login → reload-persists-session → CRUD per feature → sign out). The Flutter app *has* been driven live on an Android emulator against the real server in an earlier pass.
+- **Per-feature CRUD in a real browser** has not been scripted. What *has* been run against the production stack (Caddy over HTTPS → API container → Postgres), in headless Chromium: register → reload keeps the session → sign out → protected route bounces to `/login`, plus the verify-email page, with zero console or CSP errors. With curl it covered forgot-password → email (captured by an SMTP sink) → reset page → reset → sign in with the new password, a spoofed `X-Forwarded-For` failing to escape the auth limiter, graceful `SIGTERM`, uploads surviving container replacement, and the gated migration procedure. The Flutter app *has* been driven live on an Android emulator against the real server in an earlier pass.
+- **An Android release build** (`flutter build appbundle`) was not run here because the Android SDK could not be downloaded in this environment. The Gradle release guards were exercised in isolation (missing keystore, missing or plain-http `API_BASE_URL`, correct config). The `signingConfigs` block is the standard Flutter one, but it has not been built.
 - **Cross-client proof** (create a listing on web, see it on the app; message from the app, see it on web) has not been performed — both sides are independently verified against the same API and the same tests, but not against each other in the same run.
 
 ---
@@ -939,17 +959,21 @@ No new migrations in the web-integration pass — the schema already had everyth
 
 ## 16. Known gaps
 
-### Release blockers (mobile)
+### Operator inputs (not code)
 
-Both need a decision, not a code change:
+These cannot be committed; the system refuses to run or build without them:
 
-- **`applicationId` is `com.example.aust_track`.** Play rejects `com.example.*`. A real package name (e.g. `edu.aust.central`) must be applied to the Gradle namespace, the Kotlin source path, and `MainActivity.kt`.
-- **Release builds sign with the debug keystore.** A real upload key must be generated and referenced from a `signingConfig`, with credentials kept out of the repo.
+- **Domain + SMTP account** for `deploy/.env`. The API will not boot in production without `SMTP_HOST`.
+- **Android upload keystore** in `android/key.properties` (see the comment in `android/app/build.gradle.kts`). Back it up: losing it means you can never publish an update. The app ID is now `com.austpic.central` on every platform; it becomes permanent the moment the app is first published.
+- **Release builds** must pass `--dart-define=API_BASE_URL=https://<domain>/api/v1`.
+- **The real bus schedule.** `server/prisma/transport.example.json` ships placeholder driver numbers.
+- **iOS** release signing (Apple team, provisioning) has not been set up.
 
 ### Operational
 
-- **Local disk uploads** don't survive container replacement and won't scale past one host. The `FileObject` indirection means swapping in S3/R2 later touches one module.
-- **Production needs TLS** terminated at a proxy, with `PUBLIC_URL` set to `https://` — env validation refuses to boot otherwise. If the web client and API ever ship on different top-level domains (rather than different ports of one host, as in dev), `sameSite=strict` on the refresh cookie would need reassessing — never loosen it to `sameSite=none` without also being on HTTPS.
+- **Single instance by design.** Rate limits are in memory and uploads sit on a local Docker volume (which does survive container replacement). Running several API replicas would first need a shared rate-limit store and object storage. The `FileObject` indirection means swapping in S3/R2 touches one module.
+- **Backups are the operator's job.** `deploy/README.md` gives the `pg_dump` and uploads-volume commands, but nothing schedules them.
+- **Same-origin deployment** is what keeps the refresh cookie `sameSite=strict`. If the web client and API ever ship on different sites, that would need reassessing; never loosen it to `sameSite=none`.
 - **Existing Firebase accounts** cannot be migrated: password hashes cannot be exported from Firebase, so a forced reset is the realistic path.
 
 ### Technical debt
@@ -1006,20 +1030,28 @@ It shouldn't — the stock counter template (`test/widget_test.dart`) that used 
 ```text
 --- Server ---
 npm run lint              exit 0
-npm test                  79 passed (4 files)
-npm audit --audit-level=high   0 vulnerabilities (fast-jwt + nodemailer upgraded)
+npm test                  93 passed (5 files)
+npm audit                 0 vulnerabilities (zod 4, nodemailer 10, vitest 5, deepmerge-ts override)
 
 --- App ---
-flutter analyze           0 errors, ~15 info (pre-existing, none new)
+flutter analyze           0 errors, 15 info (pre-existing, none new) — Flutter 3.47.9
 flutter test              14 passed
-flutter build apk         Built app-debug.apk, exit 0
 
 --- Web ---
 npm run lint               exit 0
 npx tsc -b                 exit 0
-npm test                   10 passed (2 files)
+npm test                   15 passed (3 files)
 npm run build               production build succeeds
+npm audit                  0 vulnerabilities
+
+--- Production stack (deploy/docker-compose.prod.yml, DOMAIN=localhost) ---
+images                     api + web built; Caddyfile valid
+migrate → api → web        migrate exit 0, api healthy, HTTPS served
+browser (Chromium)         register → reload keeps session → sign out → /home bounces to /login; 0 console errors
+reset flow                 forgot → email → /reset-password → reset → login with new password
+operator scripts           admin:create, transport:load OK in container; db:seed refuses
+resilience                 SIGTERM exit 0; uploads survive container replacement; failed gated migration leaves old API serving
 
 --- CI ---
-.github/workflows/ci.yml   server / app / web — 3 jobs, independent
+.github/workflows/ci.yml   server / app / web / images — 4 jobs, independent
 ```
