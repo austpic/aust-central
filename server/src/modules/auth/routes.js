@@ -103,7 +103,11 @@ export default async function authRoutes(app) {
       // mid-session refreshes legitimately and often, and this endpoint is
       // already self-limiting because each token works exactly once.
       config: {
-        rateLimit: { max: 60, timeWindow: '15 minutes', keyGenerator: (r) => r.ip },
+        rateLimit: {
+          max: env.REFRESH_RATE_LIMIT_MAX,
+          timeWindow: '15 minutes',
+          keyGenerator: (r) => r.ip,
+        },
       },
       schema: {
         body: refreshBodySchema,

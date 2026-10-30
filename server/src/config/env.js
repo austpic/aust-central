@@ -114,6 +114,11 @@ const schema = z
     RATE_LIMIT_WINDOW: z.string().default('1 minute'),
     AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
     AUTH_RATE_LIMIT_WINDOW: z.string().default('15 minutes'),
+    // Per IP, per 15 minutes. Every page load of the web app refreshes once,
+    // and a campus NAT puts hundreds of students behind one address, so this
+    // is sized for a crowd. Refresh tokens are 256-bit and single-use, so the
+    // limit only bounds load from junk tokens — it is not a guessing defence.
+    REFRESH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(600),
 
     // --- Uploads ------------------------------------------------------------
     STORAGE_DIR: z.string().default('./storage'),

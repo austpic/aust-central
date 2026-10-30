@@ -420,8 +420,9 @@ All server environment variables are declared and validated in `src/config/env.j
 | `PASSWORD_MIN_LENGTH` | `10` | |
 | `ALLOWED_EMAIL_DOMAIN` | `aust.edu` (in `.env.example`) | Applies to **every** email-taking endpoint — register, login, forgot-password, resend-verification. Only an `@aust.edu` address is a valid account at all; there is no grandfathering for older domains. Leave blank to allow any domain. |
 | `CORS_ORIGINS` | `http://localhost:5173,http://localhost:3000,http://localhost:8080` | Comma-separated. `:5173` is the Vite dev server. **`*` is rejected in production** |
-| `RATE_LIMIT_MAX` | `300` per minute | Global |
-| `AUTH_RATE_LIMIT_MAX` | `10` per 15 min | Auth routes |
+| `RATE_LIMIT_MAX` | `300` per minute | Global; bucketed **per user** for signed-in calls, per IP otherwise (pinned in `test/rate-limit.test.js`) |
+| `AUTH_RATE_LIMIT_MAX` | `10` per 15 min | Auth routes, **per IP**. A campus NAT shares this across every student on it; `deploy/.env.example` sets 60 (accounts still lock individually after 5 failures) |
+| `REFRESH_RATE_LIMIT_MAX` | `600` per 15 min | `/auth/refresh`, per IP. The web app refreshes on every page load, so this is sized for a shared campus address |
 | `STORAGE_DIR` | `./storage` | Local upload root |
 | `MAX_UPLOAD_BYTES` | `5242880` (5 MB) | |
 | `SMTP_*` | *(unset)* | With no host, mail is logged to stdout instead of sent |
