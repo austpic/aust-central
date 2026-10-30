@@ -44,6 +44,18 @@ export function setSessionExpiredHandler(handler: (() => void) | null) {
 
 type SessionPayload = { accessToken: string };
 
+/**
+ * Trade the refresh cookie for a new access token. Exported for session
+ * restore on page load, which must share the single in-flight refresh below:
+ * a second, independent refresh presents the cookie the first one just spent,
+ * and the server revokes the whole session as a replay. (React StrictMode
+ * runs the restore effect twice in development, which did exactly that on
+ * every reload.)
+ */
+export function refreshSession(): Promise<boolean> {
+  return refreshOnce();
+}
+
 /** Refresh, collapsing concurrent callers onto one in-flight request. */
 async function refreshOnce(): Promise<boolean> {
   return (refreshInFlight ??= performRefresh().finally(() => {

@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react';
 
 import { apiClient } from '../api/client';
-import { clearSession, setAccessToken, setSessionExpiredHandler } from '../api/client';
+import { clearSession, refreshSession, setAccessToken, setSessionExpiredHandler } from '../api/client';
 import { ApiError } from '../api/errors';
 
 /**
@@ -75,11 +75,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
-        const refreshed = await apiClient
-          .post<SessionResponse>('/auth/refresh')
-          .catch(() => null);
-        if (!refreshed) throw new Error('no session');
-        setAccessToken(refreshed.accessToken);
+        // Through the shared single-flight refresh, never a direct POST —
+        // see refreshSession in api/client.ts.
+        if (!(await refreshSession())) throw new Error('no session');
         const me = await apiClient.get<AppUser>('/me');
         if (!cancelled) setUser(me);
       } catch {

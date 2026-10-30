@@ -122,3 +122,20 @@ describe('apiClient refresh-once-on-401', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('refreshSession (session restore on page load)', () => {
+  it('collapses overlapping restores onto one refresh call', async () => {
+    // StrictMode mounts AuthProvider's restore effect twice in development.
+    // Two independent refreshes would replay one cookie and the server would
+    // revoke the session; both callers must share a single request.
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ accessToken: 'fresh' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { refreshSession, getAccessToken } = await import('./client');
+    const results = await Promise.all([refreshSession(), refreshSession()]);
+
+    expect(results).toEqual([true, true]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(getAccessToken()).toBe('fresh');
+  });
+});
