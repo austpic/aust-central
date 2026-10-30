@@ -73,7 +73,7 @@ export async function sendMail({ to, subject, text, logger }) {
 
 /** @param {string} token */
 export function passwordResetEmail(token) {
-  const link = `${env.PUBLIC_URL}/reset-password?token=${encodeURIComponent(token)}`;
+  const link = `${env.APP_URL}/reset-password?token=${encodeURIComponent(token)}`;
   return {
     subject: 'Reset your AUST Central password',
     text: [
@@ -89,7 +89,7 @@ export function passwordResetEmail(token) {
 
 /** @param {string} token */
 export function verificationEmail(token) {
-  const link = `${env.PUBLIC_URL}/verify-email?token=${encodeURIComponent(token)}`;
+  const link = `${env.APP_URL}/verify-email?token=${encodeURIComponent(token)}`;
   return {
     subject: 'Verify your AUST Central email',
     text: [

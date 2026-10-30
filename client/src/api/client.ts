@@ -91,7 +91,9 @@ type RequestOptions = {
 };
 
 function buildUrl(path: string, query?: RequestOptions['query']): string {
-  const url = new URL(`${API_BASE_URL}${path}`);
+  // The base resolves against the page's origin, so a same-origin deployment
+  // can build with VITE_API_BASE_URL=/api/v1 (no host baked into the bundle).
+  const url = new URL(`${API_BASE_URL}${path}`, window.location.origin);
   if (query) {
     for (const [key, value] of Object.entries(query)) {
       if (value !== null && value !== undefined) url.searchParams.set(key, String(value));

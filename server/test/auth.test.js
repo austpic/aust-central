@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { createTestApp, useCleanDatabase } from './helpers/app.js';
 
@@ -173,6 +173,29 @@ describe('POST /auth/refresh', () => {
     expect(live).toBe(0);
   });
 
+  it('refuses a token spent concurrently, even when the first read looked unspent', async () => {
+    const { body } = await registerUser();
+    const winner = await post('/refresh', { refreshToken: body.refreshToken });
+    expect(winner.statusCode).toBe(200);
+
+    // Reproduce the race deterministically: a second request that read the
+    // row BEFORE the winner marked it used. Without the conditional update in
+    // the rotation transaction, this stale read mints a second live successor.
+    const delegate = app.prisma.refreshToken;
+    const original = delegate.findUnique.bind(delegate);
+    const stale = vi.spyOn(delegate, 'findUnique').mockImplementation(async (args) => {
+      const row = await original(args);
+      return row && { ...row, usedAt: null };
+    });
+    const loser = await post('/refresh', { refreshToken: body.refreshToken });
+    stale.mockRestore();
+
+    expect(loser.statusCode).toBe(401);
+    // And it is treated as a replay: the winner's successor dies too.
+    const afterRace = await post('/refresh', { refreshToken: winner.json().refreshToken });
+    expect(afterRace.statusCode).toBe(401);
+  });
+
   it('records the breach in the audit log', async () => {
     const { body } = await registerUser();
     await post('/refresh', { refreshToken: body.refreshToken });
@@ -303,6 +326,50 @@ describe('POST /auth/logout', () => {
     expect(response.statusCode).toBe(200);
 
     const reuse = await post('/refresh', { refreshToken: body.refreshToken });
+    expect(reuse.statusCode).toBe(401);
+  });
+});
+
+/**
+ * The browser flow: the refresh token rides only in the httpOnly cookie and
+ * the request has no body at all (web client api/client.ts). Fastify hands
+ * the validator `null` for that, which a bare z.object() rejects — so session
+ * restore on reload and sign-out both failed with 422 until the schema
+ * accepted a missing body.
+ */
+describe('cookie-only session calls (web client)', () => {
+  const cookieOf = (response) => {
+    const cookie = response.cookies.find((c) => c.name === 'refresh_token');
+    return `refresh_token=${cookie.value}`;
+  };
+
+  it('refreshes from the cookie with no request body', async () => {
+    const { response } = await registerUser();
+    const refreshed = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/refresh',
+      headers: { cookie: cookieOf(response) },
+    });
+    expect(refreshed.statusCode).toBe(200);
+    expect(refreshed.json().accessToken).toBeTruthy();
+  });
+
+  it('signs out from the cookie with no request body', async () => {
+    const { response } = await registerUser();
+    const cookie = cookieOf(response);
+
+    const loggedOut = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/logout',
+      headers: { cookie },
+    });
+    expect(loggedOut.statusCode).toBe(200);
+
+    const reuse = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/refresh',
+      headers: { cookie },
+    });
     expect(reuse.statusCode).toBe(401);
   });
 });

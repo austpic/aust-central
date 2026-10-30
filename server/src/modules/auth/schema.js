@@ -85,7 +85,9 @@ export const refreshBodySchema = z
     // clients rely on the httpOnly cookie.
     refreshToken: z.string().min(1).max(200).optional(),
   })
-  .strict();
+  .strict()
+  // The web client sends no body at all, which reaches validation as `null`.
+  .nullish();
 
 export const forgotPasswordBodySchema = z.object({ email: emailSchema }).strict();
 

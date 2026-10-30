@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 
+import { env } from './config/env.js';
 import { loggerOptions } from './config/logger.js';
 import { registerZodCompilers } from './lib/validation.js';
 import authPlugin from './plugins/auth.js';
@@ -38,9 +39,11 @@ export async function buildApp(options = {}) {
     // user-reported failure can be found in the logs without guesswork.
     genReqId: () => crypto.randomUUID(),
     requestIdHeader: false,
-    // Only meaningful behind our own reverse proxy. Left on because rate
-    // limiting and audit logs need the real client IP, not the proxy's.
-    trustProxy: true,
+    // Rate limiting and audit logs need the real client IP, so behind our own
+    // reverse proxy the forwarded address is trusted — but only from the hops
+    // TRUST_PROXY names. Trusting it unconditionally would let any client
+    // spoof X-Forwarded-For and dodge the per-IP auth limiter.
+    trustProxy: env.TRUST_PROXY,
     // Cap request bodies globally; multipart uploads set their own tighter cap.
     bodyLimit: 1024 * 1024,
     // Bound how long a slow client may hold a connection open.

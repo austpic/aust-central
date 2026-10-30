@@ -234,6 +234,26 @@ export async function login(app, request, { email, password }) {
   return buildSession(app, user, refreshToken);
 }
 
+/** A spent or revoked token was presented: kill its whole family. */
+async function revokeFamilyForReuse(app, request, stored) {
+  await app.prisma.refreshToken.updateMany({
+    where: { familyId: stored.familyId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+  await audit(app, {
+    actorId: stored.userId,
+    action: 'auth.refresh_reuse_detected',
+    entity: 'RefreshToken',
+    entityId: stored.id,
+    metadata: { familyId: stored.familyId },
+    request,
+  });
+  app.log.warn(
+    { userId: stored.userId, familyId: stored.familyId },
+    'refresh token reuse detected — family revoked',
+  );
+}
+
 /**
  * Exchange a refresh token for a new pair.
  *
@@ -259,22 +279,7 @@ export async function refresh(app, request, presentedToken) {
   }
 
   if (stored.usedAt || stored.revokedAt) {
-    await app.prisma.refreshToken.updateMany({
-      where: { familyId: stored.familyId, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
-    await audit(app, {
-      actorId: stored.userId,
-      action: 'auth.refresh_reuse_detected',
-      entity: 'RefreshToken',
-      entityId: stored.id,
-      metadata: { familyId: stored.familyId },
-      request,
-    });
-    app.log.warn(
-      { userId: stored.userId, familyId: stored.familyId },
-      'refresh token reuse detected — family revoked',
-    );
+    await revokeFamilyForReuse(app, request, stored);
     throw new UnauthorizedError('Session expired, please sign in again');
   }
 
@@ -289,10 +294,14 @@ export async function refresh(app, request, presentedToken) {
   // Mark spent and mint the successor inside one transaction, so a crash
   // between the two cannot leave the user with no usable token.
   const rotated = await app.prisma.$transaction(async (tx) => {
-    await tx.refreshToken.update({
-      where: { id: stored.id },
+    // Conditional, not a plain update: two requests presenting the same token
+    // at once would both pass the `usedAt` check above, and both would mint
+    // a successor. Only the one that actually flips `usedAt` may proceed.
+    const { count } = await tx.refreshToken.updateMany({
+      where: { id: stored.id, usedAt: null, revokedAt: null },
       data: { usedAt: new Date() },
     });
+    if (count === 0) return null;
     const { token, hash } = generateOpaqueToken();
     await tx.refreshToken.create({
       data: {
@@ -306,6 +315,13 @@ export async function refresh(app, request, presentedToken) {
     });
     return token;
   });
+
+  if (!rotated) {
+    // Lost the race: the same token was spent concurrently. Same policy as
+    // any other replay.
+    await revokeFamilyForReuse(app, request, stored);
+    throw new UnauthorizedError('Session expired, please sign in again');
+  }
 
   return buildSession(app, stored.user, rotated);
 }
