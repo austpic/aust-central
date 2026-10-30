@@ -171,6 +171,9 @@ class ApiClient {
 ///
 /// Override at build time without touching source:
 ///   flutter run --dart-define=API_BASE_URL=http://192.168.0.10:3000/api/v1
+///
+/// Release builds MUST set it (HTTPS — cleartext is refused by the platform):
+///   `flutter build appbundle --dart-define=API_BASE_URL=https://<your-domain>/api/v1`
 class ApiConfig {
   const ApiConfig._();
 
@@ -184,6 +187,16 @@ class ApiConfig {
   /// than `dart:io`'s `Platform` because the latter throws on web.
   static String get baseUrl {
     if (_override.isNotEmpty) return _override;
+    // The fallbacks below are developer loopbacks. A release build that
+    // reaches this line was built without its API URL and cannot work, so
+    // fail loudly on first launch rather than time out on every request.
+    // (Android release builds are also stopped earlier, in Gradle.)
+    if (kReleaseMode) {
+      throw StateError(
+        'API_BASE_URL is not set. Build with '
+        '--dart-define=API_BASE_URL=https://<your-domain>/api/v1',
+      );
+    }
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       return 'http://10.0.2.2:3000/api/v1';
     }

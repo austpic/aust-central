@@ -50,6 +50,6 @@ Brand color used throughout: `Color(0xff407362)`.
 
 ## Android build notes
 
-- `applicationId` / namespace is still `com.example.aust_track` (placeholder — not been renamed).
+- `applicationId` / namespace is `com.austpic.central` (Kotlin sources under `android/app/src/main/kotlin/com/austpic/central/`). The Dart package name is still `aust_track` — that is unrelated and does not need to change.
 - `compileSdk`/`targetSdk` = 36, NDK 28, Java/Kotlin 17.
-- Release builds sign with the **debug** keystore (`android/app/build.gradle.kts`) — fine for local APKs, not for Play Store.
+- Release builds need `android/key.properties` (upload keystore, gitignored) and `--dart-define=API_BASE_URL=https://…/api/v1`; Gradle stops a release build that lacks either. Debug builds need neither.

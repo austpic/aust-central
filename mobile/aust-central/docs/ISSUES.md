@@ -16,6 +16,8 @@ Fix: add `<uses-permission android:name="android.permission.INTERNET"/>` to `and
 
 ### 2. Release builds are signed with the debug keystore
 
+> **Resolved.** Release builds now sign with the upload key from `android/key.properties` and refuse to build without it (see `android/app/build.gradle.kts`).
+
 `android/app/build.gradle.kts:30-34`:
 
 ```kotlin
@@ -29,6 +31,8 @@ buildTypes {
 The debug keystore is universally known and not secret. Any release APK signed with it is trivially impersonatable by anyone — the Play Store rejects it outright, and sideloaded "releases" are not really authentic. A real `signingConfig` with a proper upload key is required before any release.
 
 ### 3. `applicationId` is the placeholder `com.example.aust_track`
+
+> **Resolved.** The app ID is now `com.austpic.central` on every platform (Android namespace/applicationId and Kotlin package, iOS/macOS bundle IDs, Linux application ID).
 
 `android/app/build.gradle.kts:9,23` and `android/app/src/main/kotlin/com/example/aust_track/MainActivity.kt:1` all still use the `com.example.*` namespace. Google Play rejects `com.example.*` and never lets you publish. Even before that, it collides with any other Flutter sample that ships with the same id, breaking parallel installs.
 

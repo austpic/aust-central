@@ -1,4 +1,4 @@
-package com.example.aust_track
+package com.austpic.central
 
 import io.flutter.embedding.android.FlutterActivity
 
